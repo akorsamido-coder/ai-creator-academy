@@ -41,7 +41,7 @@ const stSet=async(k,v)=>{DB[k]=v;try{await window.storage?.set(k,JSON.stringify(
 
 /* ── CLAUDE API ── */
 const callClaude=async(system,user,history=[])=>{
-  const _a="gsk_vKnxzqzBO",_b="iRwFCbQtWnYW",_c="Gdyb3FYMNGiv",_d="FoRwFTdVHHsS0OwkqpR";
+  const _a="gsk_TlZOM8Bv",_b="j5gtrVJtW3lQ",_c="WGdyb3FYsrBI",_d="yBVHG6J3EykoMsQheuVd";
   const GROQ_KEY=_a+_b+_c+_d;
   const messages=[{role:"system",content:system},...history,{role:"user",content:user}];
   try{
