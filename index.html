@@ -558,14 +558,14 @@ function Dashboard({student,onEnter,progress,assignments}){
 }
 
 /* LESSON VIEW */
-function Lesson({student,initPhase,onBack,progress,onProgress,assignments,onAssignment}){
-  const startIdx=ALL.findIndex(s=>s.pi===initPhase);
+function Lesson({student,initPhase,initSlide,onSlideChange,onBack,progress,onProgress,assignments,onAssignment}){
+  const startIdx=(initSlide!=null&&initSlide>0)?initSlide:ALL.findIndex(s=>s.pi===initPhase);
   const [idx,setIdx]=useState(startIdx>=0?startIdx:0);
   const [showGuide,setShowGuide]=useState(false);
   const [showAssign,setShowAssign]=useState(false);
   const [sidebar,setSidebar]=useState(true);
   const sl=ALL[idx];
-  useEffect(()=>{if(sl)onProgress(`${sl.pi}_${sl.si}`);},[idx]);
+  useEffect(()=>{if(sl){onProgress(`${sl.pi}_${sl.si}`);if(onSlideChange)onSlideChange(idx);}},[idx]);
   function go(d){const n=idx+d;if(n>=0&&n<TOTAL)setIdx(n);}
   function jumpPhase(pi){const i=ALL.findIndex(s=>s.pi===pi);if(i>=0)setIdx(i);}
   const curPhase=sl?.phase;
@@ -706,13 +706,26 @@ function NamePicker({onSelect}){
 }
 
 /* ROOT APP */
+/* ── SESSION HELPERS (localStorage so refresh keeps your place) ── */
+const lsGet=(k,def=null)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch{return def;}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+const lsClear=(...keys)=>keys.forEach(k=>{try{localStorage.removeItem(k);}catch{}});
+
 function App(){
-  const [auth,setAuth]=useState(null);
-  const [student,setStudent]=useState(null);
-  const [view,setView]=useState("dash");
-  const [activePhase,setActivePhase]=useState(0);
+  const [auth,setAuth]=useState(()=>lsGet("aca_auth",null));
+  const [student,setStudent]=useState(()=>lsGet("aca_student",null));
+  const [view,setView]=useState(()=>lsGet("aca_view","dash"));
+  const [activePhase,setActivePhase]=useState(()=>lsGet("aca_phase",0));
+  const [slideIdx,setSlideIdx]=useState(()=>lsGet("aca_slide",0));
   const [progress,setProgress]=useState({});
   const [assignments,setAssignments]=useState({});
+
+  /* Persist auth/student/view/phase/slide whenever they change */
+  useEffect(()=>{if(auth)lsSet("aca_auth",auth);else lsClear("aca_auth");},[auth]);
+  useEffect(()=>{if(student)lsSet("aca_student",student);else lsClear("aca_student");},[student]);
+  useEffect(()=>{lsSet("aca_view",view);},[view]);
+  useEffect(()=>{lsSet("aca_phase",activePhase);},[activePhase]);
+  useEffect(()=>{lsSet("aca_slide",slideIdx);},[slideIdx]);
 
   useEffect(()=>{
     if(student){
@@ -732,11 +745,30 @@ function App(){
   }
   function handleAssignment(phId,data){setAssignments(prev=>({...prev,[phId]:data}));}
 
-  if(!auth)return <Login onLogin={role=>setAuth(role)}/>;
-  if(auth==="admin")return <Admin onLogout={()=>{setAuth(null);setStudent(null);}}/>;
-  if(!student)return <NamePicker onSelect={name=>setStudent(name)}/>;
+  function doLogout(){
+    lsClear("aca_auth","aca_student","aca_view","aca_phase","aca_slide");
+    setAuth(null);setStudent(null);setView("dash");setActivePhase(0);setSlideIdx(0);setProgress({});setAssignments({});
+  }
+  function doSwitch(){
+    lsClear("aca_student","aca_view","aca_phase","aca_slide");
+    setStudent(null);setView("dash");setActivePhase(0);setSlideIdx(0);
+  }
 
-  if(view==="lesson")return <Lesson student={student} initPhase={activePhase} onBack={()=>setView("dash")} progress={progress} onProgress={markProgress} assignments={assignments} onAssignment={handleAssignment}/>;
+  if(!auth)return <Login onLogin={role=>{setAuth(role);lsSet("aca_auth",role);}}/>;
+  if(auth==="admin")return <Admin onLogout={doLogout}/>;
+  if(!student)return <NamePicker onSelect={name=>{setStudent(name);lsSet("aca_student",name);}}/>;
+
+  if(view==="lesson")return <Lesson
+    student={student}
+    initPhase={activePhase}
+    initSlide={slideIdx}
+    onSlideChange={i=>{setSlideIdx(i);lsSet("aca_slide",i);}}
+    onBack={()=>{setView("dash");lsSet("aca_view","dash");}}
+    progress={progress}
+    onProgress={markProgress}
+    assignments={assignments}
+    onAssignment={handleAssignment}
+  />;
 
   return <div style={{minHeight:"100vh",background:T.paper,fontFamily:"system-ui,sans-serif"}}>
     <div style={{background:T.navy,padding:"13px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -746,11 +778,11 @@ function App(){
       </div>
       <div style={{display:"flex",alignItems:"center",gap:9}}>
         <span style={{color:"rgba(255,255,255,.7)",fontSize:14}}>Hi, {student}</span>
-        <button onClick={()=>setStudent(null)} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12}}>Switch</button>
-        <button onClick={()=>{setAuth(null);setStudent(null);setProgress({});setAssignments({});}} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12}}>Sign out</button>
+        <button onClick={doSwitch} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12}}>Switch</button>
+        <button onClick={doLogout} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12}}>Sign out</button>
       </div>
     </div>
-    <Dashboard student={student} progress={progress} assignments={assignments} onEnter={pi=>{setActivePhase(pi);setView("lesson");}}/>
+    <Dashboard student={student} progress={progress} assignments={assignments} onEnter={pi=>{setActivePhase(pi);setView("lesson");lsSet("aca_phase",pi);lsSet("aca_view","lesson");}}/>
   </div>;
 }
 
