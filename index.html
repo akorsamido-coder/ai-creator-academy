@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Creator Academy</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#F7F3EA;}
+input,textarea,button,select{font-family:inherit;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#F7F3EA;}
+::-webkit-scrollbar-thumb{background:#C97A3D;border-radius:3px;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes pulse{0%,80%,100%{opacity:.2}40%{opacity:1}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef,useCallback}=React;
+
+/* ── CREDENTIALS ── */
+const CLASS_PW="creator2025";
+const ADMIN_PW="admin2025";
+
+/* ── DESIGN TOKENS ── */
+const T={navy:"#1B2A41",paper:"#F7F3EA",pb:"#E2D9C3",ink:"#1B2A41",amber:"#C97A3D",amberL:"#FDF0E0",teal:"#2F6F5E",tealL:"#E6F4F0",muted:"#8A8070",white:"#FFFFFF",red:"#C0392B",redL:"#FDECEA"};
+const PC={purple:{bg:"#F0EFFE",border:"#C3BAEE",accent:"#6C5CE7",text:"#3D3580"},teal:{bg:"#E6F9F4",border:"#A3DDCC",accent:"#00B894",text:"#005C47"},coral:{bg:"#FFF0EC",border:"#F5C4B3",accent:"#D63031",text:"#7B1818"},blue:{bg:"#EAF3FD",border:"#AECFF0",accent:"#2D7DD2",text:"#0D3E74"},amber:{bg:"#FFF8E7",border:"#F5D98B",accent:"#D4AC17",text:"#6B520A"},pink:{bg:"#FDF0F5",border:"#F0BACE",accent:"#C0392B",text:"#6B1018"}};
+const ph=c=>PC[c]||PC.purple;
+
+/* ── STORAGE ── */
+const DB={};
+const stGet=async k=>{try{const r=await window.storage?.get(k,true);return r?JSON.parse(r.value):DB[k]||null;}catch{return DB[k]||null;}};
+const stSet=async(k,v)=>{DB[k]=v;try{await window.storage?.set(k,JSON.stringify(v),true);}catch{}};
+
+/* ── CLAUDE API ── */
+const callClaude=async(system,user,history=[])=>{
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system,messages:[...history,{role:"user",content:user}]})});
+  const d=await res.json();return d.content?.[0]?.text||"Sorry, could not get a response.";
+};
+
+/* ── COURSE DATA ── */
+const ROSTER=["Sammy","Student 2","Student 3","Student 4","Student 5"];
+
+const PHASES=[
+{id:"p1",n:1,title:"Foundations",sub:"The AI Beginner",weeks:"Weeks 1–2",color:"purple",slides:[
+  {t:"title",h:"Phase 1 — Foundations",s:"The AI Beginner · Weeks 1–2",b:"Welcome to the starting point for anyone looking to understand and use Artificial Intelligence confidently. By the end of this phase you'll understand what AI is at a conceptual level and be actively using AI tools to solve real problems. Think of this phase as learning the language of AI before becoming fluent in it."},
+  {t:"content",h:"1.1 What is Artificial Intelligence?",b:"Artificial Intelligence (AI) refers to the ability of machines to simulate human cognitive functions — learning, reasoning, problem-solving, understanding language, and recognizing patterns. AI is not a single technology; it's an umbrella term covering many subfields and approaches.\n\nA simple way to understand AI: any system that perceives its environment and takes actions that maximize its chance of achieving a defined goal — a chatbot answering questions, an image classifier detecting tumours, or a recommendation engine suggesting your next show.\n\nThe most important thing to understand about AI in 2024 is this: AI does not think the way humans do. It does not have consciousness, feelings, or genuine understanding. What it has is extraordinary pattern recognition — the ability to find statistical regularities in massive datasets and use those patterns to generate useful outputs.",note:{l:"Key idea",t:"AI does not think the way humans do. It has no consciousness or genuine understanding — what it has is extraordinary pattern recognition."}},
+  {t:"table",h:"The AI Hierarchy — AI → ML → Deep Learning",b:"These three terms are often confused. Each inner concept is a subset of the outer one.",cols:["Term","Definition","Example"],rows:[["Artificial Intelligence (AI)","Broad field — machines mimicking human intelligence","Virtual assistants, chess engines, autopilot systems"],["Machine Learning (ML)","AI that learns from data without explicit programming","Spam filters, recommendation systems, fraud detection"],["Deep Learning (DL)","ML using multi-layered neural networks inspired by the brain","ChatGPT, image recognition, voice AI"],["Generative AI","AI that creates new content (text, images, video, code)","DALL·E, Midjourney, Claude, GPT-4, Sora"],["Large Language Model (LLM)","Deep learning model trained on massive text datasets","GPT-4, Claude 3, Gemini, Llama 3"]]},
+  {t:"timeline",h:"1.2 History & Evolution of AI",b:"AI is the result of decades of research, failed experiments, and breakthrough discoveries. Understanding this history helps you appreciate why today's AI is so powerful.",items:[{y:"1950",l:"Turing Test",d:"Alan Turing proposes the first formal definition of machine intelligence — can a machine fool a human?"},{y:"1956",l:"Dartmouth Conference",d:"The term 'Artificial Intelligence' is officially coined as a field of study."},{y:"1997",l:"Deep Blue",d:"IBM Deep Blue defeats chess world champion Kasparov — AI beats humans at complex strategy."},{y:"2012",l:"ImageNet Breakthrough",d:"AlexNet wins ImageNet competition — the deep learning revolution begins."},{y:"2017",l:"Transformer Architecture",d:"'Attention Is All You Need' — the foundation of every modern LLM including GPT and Claude."},{y:"2020",l:"GPT-3 Released",d:"175 billion parameters — AI could write human-like text at scale for the first time."},{y:"2022",l:"ChatGPT Launched",d:"Reaches 1 million users in 5 days. AI becomes a mass-market product overnight."},{y:"2024+",l:"Multimodal AI Era",d:"AI can now see, hear, speak, and create across text, image, audio, and video formats."}]},
+  {t:"table",h:"1.3 Core AI Terminology",b:"You need to be fluent in these terms — they appear constantly throughout this course and in every AI tool you use.",cols:["Term","What it means","Simple analogy"],rows:[["Model","A trained AI system that takes input and produces output","A trained chef — learned from recipes, now cooks independently"],["Training","The process of feeding a model data so it learns patterns","Going through school — learning from examples"],["Inference","Using a trained model to generate responses/predictions","The chef cooking a new dish using learned skills"],["Token","A unit of text (roughly a word fragment) processed by an LLM","Like a LEGO brick — LLMs think in tokens, not full words"],["Prompt","The input/instruction you give to an AI model","A question or task you hand to an assistant"],["Context window","Max amount of text an AI can 'remember' in one session","Short-term memory — only holds so much at once"],["Hallucination","When AI confidently states false or made-up information","Someone who guesses confidently instead of admitting ignorance"],["Fine-tuning","Further training a pre-trained model on specific data","A specialised internship after a general degree"],["Parameters","Internal values defining what a model has learned","The millions of 'memories' stored inside the model"],["Multimodal","AI that works with multiple input types (text, image, audio)","An assistant who can read, see, and listen at once"]]},
+  {t:"table",h:"1.5 Types of Machine Learning",b:"Machine learning comes in three core flavours — each suited to different problems and data types.",cols:["ML type","How it learns","Real-world use cases","Key algorithms"],rows:[["Supervised learning","From labeled examples (input → correct output)","Spam detection, price prediction, medical diagnosis, fraud detection","Linear Regression, Decision Trees, Neural Networks, SVM"],["Unsupervised learning","From patterns in unlabeled data","Customer segmentation, anomaly detection, recommendation engines","K-Means, PCA, Autoencoders, DBSCAN"],["Reinforcement learning","From rewards and penalties through trial and error","Game-playing AI, robotics, self-driving cars, trading bots","Q-Learning, PPO, DDPG, Actor-Critic"]]},
+  {t:"table",h:"1.6 The Current AI Landscape (2024–2025)",b:"Multiple major players are racing to build the most capable, fastest, and most accessible AI systems.",cols:["Model / company","Type","Strengths","Best used for"],rows:[["GPT-4o / OpenAI","Multimodal LLM","Versatile, strong coding, image understanding","General tasks, coding, vision, content"],["Claude 3.5 / Anthropic","LLM","Long context (200K), nuanced writing, safety-focused","Writing, analysis, research, coding"],["Gemini 1.5 / Google","Multimodal LLM","Huge context window (1M tokens), Google integration","Research, summarising long docs, search"],["Llama 3 / Meta","Open-source LLM","Free, can run locally, highly customisable","Developers, fine-tuning, privacy tasks"],["Midjourney","Image gen","Highest quality artistic image generation","Marketing, art, design, concept visuals"],["DALL·E 3 / OpenAI","Image gen","Integrated into ChatGPT, great prompt following","Quick image generation from text"],["Sora / OpenAI","Video gen","Text-to-video (emerging)","Creative video content, prototyping"]]},
+  {t:"content",h:"1.7 How Large Language Models Actually Work",b:"Understanding LLMs under the hood makes you a dramatically more effective AI user and builder.\n\nStep 1 — Tokenisation: before processing your text, an LLM converts it into tokens (~3–4 characters each). Models have a token limit per conversation, and you're billed by tokens when using APIs. The word 'understanding' might split into 'under' + 'standing'.\n\nStep 2 — Embeddings: each token is converted into a vector — a long list of numbers encoding its meaning in multi-dimensional space. Words with similar meanings end up geometrically close together. This is why AI understands that 'king' minus 'man' plus 'woman' equals something close to 'queen'.\n\nStep 3 — The Transformer: introduced in the 2017 paper 'Attention Is All You Need', this architecture powers every major LLM. Its core innovation is the attention mechanism — each token 'looks at' every other token and decides which ones are most relevant to its meaning.\n\nStep 4 — Training: LLMs are trained through self-supervised learning on billions of webpages, books, code, and papers. The objective is simple: predict the next token. Over trillions of predictions the model learns grammar, facts, reasoning, and creative styles — purely as a side effect of next-token prediction.",note:{l:"Rule of thumb",t:"1 token ≈ 0.75 words. A 750-word essay is about 1,000 tokens. Claude 3.5's 200K context window holds roughly 150,000 words — enough for entire codebases."}},
+  {t:"table",h:"1.8 AI vs Human Intelligence",b:"The best outcomes come from combining both intelligences — AI handling what it does best, humans handling the rest.",cols:["Capability","AI","Human"],rows:[["Speed of processing","Millions of tokens/second","Much slower — but deeper per thought"],["Creative originality","Recombines existing patterns","Genuinely novel ideas from lived experience"],["Factual accuracy","Can hallucinate confidently","Can verify, reason about uncertainty"],["Common sense reasoning","Struggles with real-world physics & intuition","Strong — built from lived experience"],["Long-term memory","Resets between sessions by default","Remembers for a lifetime"],["Emotional intelligence","Simulates understanding, doesn't feel","Genuine empathy and emotional resonance"],["Scale / parallelism","Millions of simultaneous instances","One brain, one task at a time"],["Cost per task","Fractions of a cent per complex task","Expensive — salary, benefits, time"]]},
+  {t:"table",h:"1.9 Types of AI by Capability Level",b:"Every AI tool you use today is ANI — narrow intelligence, not general intelligence.",cols:["Level","Name","Definition","Current status"],rows:[["ANI","Artificial Narrow Intelligence","AI that excels at one specific task only — cannot generalise beyond training","EXISTS TODAY — all current AI falls here"],["AGI","Artificial General Intelligence","AI that performs any intellectual task a human can, with equal or greater ability","DOES NOT EXIST YET — debated timeline of 2–30 years"],["ASI","Artificial Superintelligence","AI that surpasses human intelligence across all domains","THEORETICAL — beyond current imagination"]]},
+  {t:"exercises",h:"Phase 1 — Practical Exercises",milestone:"You can explain what an LLM is, identify the three ML types, use ChatGPT for basic tasks, and choose the right tool category for any job.",items:[{task:"Create accounts",desc:"Sign up for ChatGPT (OpenAI), Claude (Anthropic), and Gemini (Google). Explore each interface.",time:"30 min"},{task:"First conversations",desc:"Have 5 different conversations with an AI: explain a problem, get ideas, summarise an article, ask for code, request advice.",time:"45 min"},{task:"Compare AI models",desc:"Ask the exact same question to ChatGPT, Claude, and Gemini. Note what's different about each answer.",time:"30 min"},{task:"Terminology quiz",desc:"Without looking at notes, define: LLM, Token, Prompt, Hallucination, Fine-tuning, Context Window. Then check your answers.",time:"20 min"},{task:"Classify tools",desc:"List 10 AI tools you've heard of and categorise each as Standalone, Integrated, or Custom API.",time:"20 min"}]}
+]},
+{id:"p2",n:2,title:"Prompt Engineering",sub:"The Communicator",weeks:"Weeks 3–4",color:"teal",slides:[
+  {t:"title",h:"Phase 2 — Prompt Engineering",s:"The Communicator · Weeks 3–4",b:"Prompt Engineering is the art and science of communicating with AI effectively. Just as a skilled manager gives clear, structured instructions to get the best work from their team, a skilled AI user gives well-structured prompts to get the best outputs from AI models. This phase transforms you from a casual AI user into someone who reliably gets exactly what they want — first or second try."},
+  {t:"content",h:"2.1 Why Prompt Engineering Matters",b:"The same AI model can produce a mediocre result or an exceptional one depending entirely on how you ask. Studies and real-world usage consistently show that prompt quality is the single biggest factor in output quality — more than which model you use. Mastering prompting is the highest-leverage skill in all of AI.\n\nBad prompt: 'Write about marketing' → Generic 500-word essay on marketing basics.\n\nGood prompt: 'Act as a senior B2B SaaS marketer. Write 3 LinkedIn post ideas targeting CTOs about reducing cloud costs. Each post: max 150 words, conversational tone, end with a question.' → 3 targeted, professional LinkedIn posts with clear hooks, specific pain points, and engagement questions.\n\nA well-crafted prompt can turn a $20/month AI subscription into the equivalent of having a full-time marketing director, senior developer, research analyst, and creative director on-call — 24 hours a day, 7 days a week."},
+  {t:"table",h:"2.2 Anatomy of a Great Prompt",b:"Every high-performing prompt contains five core components. You don't always need all five, but knowing them lets you diagnose why a prompt isn't working.",cols:["Component","What it does","Example"],rows:[["Role","Tells the AI what expert persona to adopt — dramatically improves depth and accuracy","'Act as a senior financial advisor with 20 years of experience...'"],["Task","The clear, specific action you want performed — use action verbs","'Write / Analyse / Summarise / Compare / Generate / Explain...'"],["Context","Background information the AI needs to give a relevant response","'My audience is non-technical startup founders aged 30–45...'"],["Format","How you want the output structured","'Respond in bullet points / a table / JSON / a 3-paragraph essay...'"],["Constraint","Limits that keep the output focused and usable","'Under 200 words / No jargon / Only cite peer-reviewed sources...'"]]},
+  {t:"table",h:"2.3 Prompt Frameworks",b:"Frameworks give you a repeatable template for building prompts — plug your details into a proven structure instead of starting from scratch every time.",cols:["Framework","Elements","Best for","Example"],rows:[["AIM","Action — Intent — Message","Task-focused prompts where the goal is clear","Write a cold email (A) to introduce our DevOps SaaS to startup CTOs (I). Mention: slow deployment, high cloud costs, poor monitoring (M)."],["RCF","Role — Context — Format","When the AI's persona and output structure matter most","You are an expert UX copywriter (R). I'm launching a fitness app for busy professionals (C). Give me 5 headline options, max 8 words each (F)."],["Chain-of-Thought","Step 1 → Step 2 → Step 3 → Conclusion","Complex reasoning, maths, logic, multi-step decisions","'Think step by step. First identify the problem. Second list solutions. Third evaluate pros and cons. Then decide.'"],["Few-Shot","Example 1 → Example 2 → Now do this","Consistent style, tone, or format","Show AI 2 examples of the exact output style you want, then ask for your actual request."],["Negative Prompting","Do NOT do X, avoid Y, never use Z","Preventing unwanted patterns in output","'Do not use bullet points. Do not start with I. Avoid marketing jargon.'"]]},
+  {t:"table",h:"2.4 Advanced Prompt Patterns",cols:["Pattern","How it works","When to use it","Example"],rows:[["Persona pattern","Assign the AI a specific expert identity to unlock domain depth","Technical writing, professional advice, creative voices","'Act as a Harvard-trained nutritionist...'"],["Iterative refinement","Ask AI to improve its own output step by step","Long-form content, complex analysis, code debugging","'Rate your last response 1–10 and rewrite it to score 10'"],["Socratic method","Ask AI to ask YOU questions first before answering","When AI needs context it can't guess","'Before writing my business plan, ask me 10 questions about my business, then write it based on my answers.'"],["Devil's advocate","Ask AI to argue strongly against its own output","Stress-testing ideas before you invest in them","Step 1: Get a plan. Step 2: 'Now argue against this as a harsh VC. List the top 5 reasons it will fail.' Step 3: Revise plan."],["Output scaffolding","Give AI the structure and ask it to fill it in","Reports, templates, structured documents","'Fill in this template: Title: ___ Problem: ___ Solution: ___ Next steps: ___'"]]},
+  {t:"table",h:"2.5 Common Prompt Mistakes & How to Fix Them",cols:["Mistake","Why it fails","Fix"],rows:[["Vague instructions ('write something good')","AI has no idea what 'good' means in your context","Be specific: topic, tone, audience, length, format"],["Missing constraints","Output becomes too long, too broad, or off-target","Add word count, bullet limit, time frame, scope"],["Overloading one prompt","AI tries to do too much, quality drops across all tasks","Split complex requests into sequential prompts"],["No role specified","AI defaults to generic, surface-level response","Always define who the AI is for important tasks"],["Not iterating","Accepting the first mediocre output","Treat prompting as a feedback loop — refine 3–5 times"],["Ignoring hallucinations","AI invents facts, names, or statistics","Ask for sources; verify important claims independently"]]},
+  {t:"content",h:"2.6 System Prompts — The Hidden Layer of Control",b:"When you use ChatGPT, Claude, or any AI product, there's usually a system prompt running silently behind the scenes — before your message even arrives. System prompts define the AI's persona, capabilities, restrictions, and output format for the entire conversation.\n\nUnderstanding system prompts makes you a far more powerful prompt engineer — you can build your own AI-powered applications that behave exactly how you want.",code:"SYSTEM PROMPT TEMPLATE:\n\nYou are [NAME], a [ROLE] for [COMPANY/PURPOSE].\nYour primary goal is to [MAIN OBJECTIVE].\n\nPERSONALITY:\n- Tone: [friendly/formal/concise]\n- Style: [conversational/technical]\n\nCAPABILITIES:\nYou can help with: [list specific tasks]\n\nRESTRICTIONS:\nYou must not: [list forbidden topics/actions]\n\nOUTPUT FORMAT:\nAlways respond with [format instructions]"},
+  {t:"exercises",h:"Phase 2 — Practical Exercises",milestone:"You consistently get the output you want on the first or second prompt. You can diagnose a bad output and fix it.",items:[{task:"AIM framework practice",desc:"Write 10 prompts using the AIM framework for 10 different real tasks (email, blog post, data analysis, etc.)"},{task:"RCF framework practice",desc:"Write 10 prompts using RCF. Focus on tasks where the role dramatically changes the output."},{task:"Iteration challenge",desc:"Take one AI output you dislike. Refine the prompt 5 times, noting exactly what changed and why the output improved each time."},{task:"Persona testing",desc:"Ask the same question as 3 different personas and compare the three outputs."},{task:"COT problem solving",desc:"Give AI a logic puzzle. Compare the answer with and without 'think step by step' — which is more accurate?"}]}
+]},
+{id:"p3",n:3,title:"Essential AI Tools",sub:"The Practitioner",weeks:"Weeks 5–8",color:"coral",slides:[
+  {t:"title",h:"Phase 3 — Essential AI Tools",s:"The Practitioner · Weeks 5–8",b:"Phase 3 is where theory becomes practice. You'll build a comprehensive toolkit of AI tools across five major domains: writing, design, video, data, and code. By the end of this phase you'll produce professional-grade content across multiple formats entirely with AI — choosing the right tool for every job."},
+  {t:"table",h:"3.1 Writing & Content Creation Tools",b:"Text-based AI tools are the most mature and versatile category.",cols:["Tool","Type","Key strength","Best for"],rows:[["ChatGPT (GPT-4o)","LLM chatbot","Extremely versatile, code interpreter, image input","General writing, coding, data analysis, brainstorming"],["Claude 3.5 (Anthropic)","LLM chatbot","Long documents (200K context), nuanced writing, safety","Long-form writing, analysis, legal/medical content"],["Gemini 1.5 (Google)","LLM chatbot","Massive context window (1M tokens), Google Drive integration","Analysing long documents, Google Workspace users"],["Grammarly","Writing assistant","Grammar, style, tone checking in real time","Polishing emails, essays, professional writing"],["Perplexity AI","AI search","Real-time web search with citations","Research, fact-checking, current events"],["Jasper AI","Content platform","Marketing-focused templates, brand voice training","Marketing teams, ad copy, product descriptions"],["Copy.ai","Copy generator","Fast marketing copy templates","Social posts, product descriptions, email subject lines"]]},
+  {t:"table",h:"3.2 Image & Design AI Tools",b:"AI image tools have collapsed the barrier between 'having an idea' and 'having a visual'.",cols:["Tool","Strength","Style/output","Best for","Pricing"],rows:[["Midjourney v6","Highest artistic quality","Painterly, cinematic, hyper-real","Art, marketing campaigns, concept visuals","From $10/mo"],["DALL·E 3 (ChatGPT)","Excellent prompt following","Photorealistic to illustrative","Quick visuals inside ChatGPT workflow","Included in ChatGPT Plus"],["Adobe Firefly","Commercial-safe, no copyright issues","Professional, clean","Brands needing legally safe images","Free + Creative Cloud"],["Canva AI","Drag-and-drop + AI generation in one tool","Clean, template-based","Social media, presentations, quick designs","Free + Pro"],["Stable Diffusion","Open-source, run locally, fully customisable","Highly variable","Developers, privacy-sensitive, fine-tuned styles","Free (self-hosted)"]]},
+  {t:"table",h:"3.3 Video & Audio AI Tools",cols:["Tool","Category","What it does","Best for"],rows:[["Runway Gen-3","Video generation","Text/image to video, video editing with AI","Creative video content, short films, ad clips"],["Synthesia","AI avatar video","Talking-head videos from text in 120+ languages","Training videos, corporate comms, multilingual content"],["ElevenLabs","Voice / TTS","Voice cloning, ultra-realistic text-to-speech","Podcasts, audiobooks, YouTube voiceovers, localisation"],["Descript","Video/audio editor","Edit video by editing the transcript","Podcast editing, removing filler words, video repurposing"],["CapCut AI","AI video editor","Auto-captions, background removal, AI-generated clips","Short-form video (TikTok, Reels, YouTube Shorts)"],["HeyGen","AI avatar video","Custom AI presenter, video translation","Sales videos, product demos, multilingual marketing"]]},
+  {t:"table",h:"3.4 Data & Productivity AI Tools",cols:["Tool","Best feature","Use case"],rows:[["ChatGPT Advanced Data Analysis","Executes Python code on your uploaded data files","Data cleaning, visualisation, statistical analysis, forecasting"],["Microsoft Copilot","Integrated into Word, Excel, PowerPoint, Outlook, Teams","Writing docs, analysing spreadsheets, summarising meetings"],["Notion AI","AI writing + summarisation inside your workspace","Meeting notes, project docs, knowledge base management"],["Perplexity AI","Real-time web search with cited sources","Deep research, fact-checking, literature reviews"],["Otter.ai","Real-time meeting transcription + AI summaries","Recording meetings, generating action items, interview notes"]]},
+  {t:"table",h:"3.5 Code & No-Code AI Tools",cols:["Tool","Type","Key feature","Best for"],rows:[["Cursor","AI code editor","VS Code-based IDE with built-in Claude/GPT — edits entire files","Professional developers who want AI inline with their code"],["Bolt.new","AI app builder","Describe an app → get full working code in seconds","Non-developers building web apps without touching code"],["Replit + Ghostwriter","Online IDE + AI","Code in browser + AI assistant explains and writes code","Beginners learning to code, quick prototypes"],["GitHub Copilot","AI code completion","Suggests code line-by-line as you type","Developers wanting autocomplete that understands context"],["v0 (Vercel)","UI generator","Describe a UI component → get React/Tailwind code","Frontend developers, designers who want coded components"],["Zapier + AI","No-code automation","Connect 6,000+ apps with AI steps — no coding","Automating repetitive workflows, email processing, data entry"]]},
+  {t:"exercises",h:"Phase 3 — Practical Exercises",milestone:"You produce professional content across text, image, video, and data formats using AI tools — and you choose the right tool for any job.",items:[{task:"Full content pipeline",desc:"Write, illustrate, and publish one blog post entirely with AI: topic research (Perplexity), writing (Claude/ChatGPT), cover image (DALL·E/Midjourney), editing (Grammarly)."},{task:"1-minute promo video",desc:"Create a 60-second promotional video: script (ChatGPT) → voiceover (ElevenLabs) → visuals (Runway/CapCut) → final edit (Descript)."},{task:"Data analysis project",desc:"Upload a CSV dataset to ChatGPT Advanced Data Analysis. Ask it to clean the data, identify trends, and produce 3 charts."},{task:"Automation setup",desc:"Build a Zapier workflow: 'When I receive a Gmail with [keyword], summarise it with AI and send summary to Slack'."},{task:"Tool comparison matrix",desc:"Test 3 image tools (DALL·E, Midjourney, Canva AI) with the same prompt. Create a table comparing quality, speed, cost, and style."}]}
+]},
+{id:"p4",n:4,title:"App & Workflow Building",sub:"The Builder",weeks:"Weeks 9–12",color:"blue",slides:[
+  {t:"title",h:"Phase 4 — App & Workflow Building",s:"The Builder · Weeks 9–12",b:"Phase 4 is where you transition from AI user to AI builder. You'll use AI to create functional applications, websites, and automation systems — no prior coding experience required. The core skill here is thinking architecturally: breaking a complex goal into smaller AI-powered steps and connecting them into a seamless workflow."},
+  {t:"table",h:"4.1 Prompting for Code — Best Practices",cols:["Principle","What to do","Example"],rows:[["Be specific","Name the exact language, framework, and libraries","'Write this in Python 3.11 using Flask and SQLite'"],["Describe behaviour","Explain what the app should do, not just what it is","'When user clicks submit, validate the email field and show an error if invalid'"],["Set constraints","Specify what NOT to use or include","'No external APIs. Use only vanilla JavaScript. No jQuery.'"],["Ask for comments","Request inline code explanation","'Add a comment before each function explaining what it does'"],["Build incrementally","Build one feature at a time, not the whole app","'First just give me the login page HTML. We'll add the backend next.'"],["Debug with AI","Paste errors directly into the AI","'I get this error: [paste error]. Here is my code: [paste code]. Fix it.'"]]},
+  {t:"table",h:"4.2 AI IDEs — Tools for Building with AI",cols:["Tool","How it works","Best for","Skill level"],rows:[["Bolt.new","Describe your app in plain English → full working app (React + Node) generated instantly in browser","Non-developers, rapid prototyping, client demos","Beginner"],["Replit","Online coding environment + AI assistant (Ghostwriter) — write, run, deploy all in one tab","Learning to code, school projects, collaborative coding","Beginner–Intermediate"],["Cursor","VS Code fork with AI that understands your entire codebase — edits multiple files at once","Professional developers, complex projects, refactoring","Intermediate–Advanced"],["GitHub Copilot","Inline code suggestions as you type, trained on millions of repositories","Developers wanting faster autocomplete in any IDE","Intermediate"],["v0 by Vercel","Describe a UI → get production-ready React + Tailwind component code","Frontend developers, UI builders, design-to-code","Intermediate"]]},
+  {t:"content",h:"4.3 Prompt Chaining — Solving Complex Problems",b:"A single prompt can only do so much. Prompt chaining breaks a complex task into a sequence of AI calls, where the output of each step becomes the input for the next. This is how AI agents and sophisticated automation workflows are built.\n\nExample — Research → Analysis → Report:\n\nStep 1 (Research): 'Search and summarise the top 5 trends in renewable energy in 2024' → 5 bullet-point trend summaries.\n\nStep 2 (Analyse): 'Given these trends [paste Step 1 output], identify the 3 with the highest commercial opportunity for a startup' → 3 prioritised opportunities with reasoning.\n\nStep 3 (Draft): 'Write an executive summary report based on these 3 opportunities [paste Step 2]. Format: Heading, 2-paragraph summary per opportunity, conclusion' → structured 600-word report draft.\n\nStep 4 (Refine): 'Review this report [paste Step 3]. Make it more concise. Improve the opening hook. Strengthen the conclusion.' → Final polished report ready to share."},
+  {t:"table",h:"4.4 Building Automation Workflows",b:"Automation is where AI creates compounding value — it multiplies your output by handling repetitive, rule-based tasks without you.",cols:["Automation tool","Best feature","AI integration","Use case examples"],rows:[["Zapier","6,000+ app integrations, easiest to set up","OpenAI, Claude, Gemini steps built in","Auto-respond to emails, post social content, update CRM from forms"],["Make.com","Visual workflow builder, more powerful than Zapier","HTTP modules connect to any AI API","Complex multi-step workflows, data transformation, conditional logic"],["n8n","Open-source, self-hostable, developer-friendly","Full API access to any AI service","Advanced workflows, privacy-sensitive data, custom enterprise automation"],["Airtable + AI","Spreadsheet-database hybrid with AI columns","Built-in AI formulas (summarise, classify, translate)","Content pipelines, CRM with AI enrichment, inventory with AI tagging"]]},
+  {t:"table",h:"4.5 Understanding AI Limitations",b:"Every experienced AI builder knows these limitations and designs their systems to work around them.",cols:["Limitation","What it means","How to work around it"],rows:[["Hallucinations","AI confidently states false facts, fake sources, or invented statistics","Always verify critical claims; ask AI to cite sources; use Perplexity for fact-heavy research"],["Context window limits","AI 'forgets' earlier parts of a long conversation","Summarise key points and re-inject them; use models with large context windows"],["Knowledge cutoff","AI doesn't know about events after its training date","Use web-search-enabled AI (ChatGPT with Browsing, Perplexity) for current events"],["Inconsistent outputs","Same prompt can give different answers each time","Lower the temperature setting; use structured prompts; validate outputs programmatically"],["No long-term memory","AI doesn't remember previous sessions by default","Use memory features (ChatGPT Memory), vector databases, or system prompts for context"]]},
+  {t:"content",h:"4.6 Understanding APIs",b:"An API (Application Programming Interface) is how software communicates with other software. AI APIs let you send a message to an AI model and receive a response — programmatically, at scale, inside your own application. Every serious AI builder needs to understand how to use them.",code:"# Install: pip install anthropic\nimport anthropic\n\nclient = anthropic.Anthropic()\n\nmessage = client.messages.create(\n    model=\"claude-3-5-sonnet-20241022\",\n    max_tokens=1024,\n    system=\"You are a helpful marketing assistant.\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"Write 3 taglines for a productivity app.\"}\n    ]\n)\n\nprint(message.content[0].text)\n# Output: 'Work smarter, not harder.'\n#         'Get more done in less time.'\n#         'Your day, optimised.'"},
+  {t:"exercises",h:"Phase 4 — Practical Exercises",milestone:"You can build a functional web app, design an automation workflow, chain prompts for complex outputs, and deploy a live project.",items:[{task:"Web app",desc:"Use Bolt.new or Replit to build a functional web app: a quiz app, to-do list, or simple calculator. Deploy it live."},{task:"Mini game",desc:"Ask ChatGPT or Claude to build a simple browser-based game (number guess, word scramble, or Flappy Bird clone in HTML/JS)."},{task:"Automation workflow",desc:"Build a Zapier workflow: 'When I fill out a Google Form → AI processes the response → sends formatted email reply'."},{task:"Prompt chain",desc:"Build a 4-step prompt chain to produce a complete market research report on any industry. Document each step and its output."},{task:"Custom AI agent",desc:"Build a custom GPT in ChatGPT with a specific persona, instructions, and knowledge base — e.g. a customer support agent for a fictional product."}]}
+]},
+{id:"p5",n:5,title:"Monetization",sub:"The Entrepreneur",weeks:"Weeks 13–16",color:"amber",slides:[
+  {t:"title",h:"Phase 5 — Monetization",s:"The Entrepreneur · Weeks 13–16",b:"Skills without income are hobbies. Phase 5 converts your AI mastery into real revenue. Whether your goal is freelancing on the side, building a full AI business, or selling digital products at scale, this phase gives you the frameworks, platforms, and strategies to start earning with AI — even as a beginner."},
+  {t:"table",h:"5.1 The AI Freelancing Opportunity",b:"AI creates massive demand for AI-skilled freelancers who can deliver 10x the output in half the time.",cols:["Service","What you deliver","Typical rate","Skill level"],rows:[["AI copywriting","Blog posts, email sequences, ad copy, social content","$50–$300/piece","Beginner"],["AI video creation","YouTube videos, promo clips, training videos with AI avatars","$200–$2,000/video","Beginner–Intermediate"],["AI image & design","Brand visuals, social media kits, product images, concept art","$100–$500/project","Beginner"],["AI app development","Simple web apps, landing pages, tools built with AI-assisted code","$500–$5,000/project","Intermediate"],["AI automation setup","Zapier/Make workflows that save clients hours of manual work","$500–$3,000 setup + $500/mo retainer","Intermediate"],["AI chatbot building","Custom AI chatbots for websites, customer support, lead gen","$1,000–$10,000/build","Intermediate–Advanced"],["AI training & consulting","Teaching teams to use AI tools, auditing AI workflows","$500–$5,000/day rate","Advanced"]]},
+  {t:"table",h:"5.2 Freelancing Platforms & How to Win",cols:["Platform","Best for","How to stand out","First step"],rows:[["Upwork","Long-term contracts, enterprise clients, higher budgets","Niche down (e.g. 'AI video for SaaS companies'), show results not tools","Create profile, pass skill tests, apply to 10 jobs with custom proposals"],["Fiverr","Quick projects, packages, passive discovery","Create 3 service tiers, add video intro, collect 5-star reviews fast","Set up 3 gigs targeting specific niches with SEO-optimised titles"],["Contra","Project-based, no platform fees, professional positioning","Build strong portfolio page, get 3 client referrals","Sign up, add portfolio projects, activate referral network"],["LinkedIn","B2B clients, consulting, high-ticket services","Post AI tutorials weekly, DM relevant decision-makers","Optimise headline: 'AI [Speciality] for [Target Client]'"],["Cold outreach","Local businesses, agencies, specific niches","Offer a free AI audit or mini demo tailored to their pain point","Identify 20 target businesses, personalise 20 emails with AI"]]},
+  {t:"table",h:"5.3 Building an AI Business",b:"Beyond freelancing, AI enables scalable businesses with minimal overhead.",cols:["Business model","Description","Revenue potential"],rows:[["Done-for-you AI agency","Deliver AI-powered services (content, video, automation) to niche clients on retainer","$5K–$50K/month"],["AI SaaS product","Build a software tool powered by AI APIs and charge monthly subscriptions","$1K–$100K+/month"],["Digital products","Create and sell AI-generated or AI-assisted assets: templates, prompt packs, courses","$1K–$20K/month passive"],["AI education / course","Teach others what you know about AI through courses, newsletters, or communities","$2K–$50K/launch"],["Niche AI consulting","Advise specific industries (real estate, healthcare, legal, education) on implementing AI","$2K–$20K/month"]]},
+  {t:"table",h:"5.5 Pricing Your AI Services",cols:["Pricing model","How it works","When to use","Example"],rows:[["Hourly rate","Charge per hour of work","Early-stage, unclear scope, consulting calls","$50–$300/hr depending on skill level"],["Project-based (fixed)","Flat fee for a defined deliverable","Clear scope, well-defined output","$500 for 5 blog posts; $2,000 for a chatbot build"],["Retainer","Monthly recurring fee for ongoing services","Clients needing regular output","$1,500/month for 8 social posts + 2 blog posts"],["Value-based","Price based on the value you deliver, not your time","High-ROI deliverables (leads, revenue, cost savings)","Charge $5,000 for an automation saving client $20K/year"],["Productised service","Standardised, packaged service at a fixed price delivered at scale","When you want to scale without custom quoting","'AI Social Kit' — 30 posts + 4 graphics for $997/month"]]},
+  {t:"exercises",h:"Phase 5 — Practical Exercises",milestone:"You have defined your AI services, created at least one digital product, sent your first cold outreach messages, and understand your pricing options.",items:[{task:"Build your portfolio",desc:"Create 3 sample projects showcasing different AI skills. Each project should show a before/after or a clear problem → AI solution outcome."},{task:"Define 3 services",desc:"Write out 3 AI services you would offer: service name, what's included, who it's for, price, and delivery timeline."},{task:"Cold outreach",desc:"Identify 5 local businesses or LinkedIn connections who could benefit from your AI services. Use AI to write personalised outreach emails for each."},{task:"Create a digital product",desc:"Build one product: a prompt pack (minimum 20 prompts), a template, or a short ebook. List it on Gumroad at a real price."},{task:"Publish your first case study",desc:"Document one AI project you completed, showing the process, tools used, time saved, and results. Publish on LinkedIn or a personal website."}]}
+]},
+{id:"p6",n:6,title:"Mastery & Beyond",sub:"The Expert",weeks:"Ongoing",color:"pink",slides:[
+  {t:"title",h:"Phase 6 — Mastery & Beyond",s:"The Expert · Ongoing",b:"Phase 6 is not a finish line — it's the beginning of your ongoing journey as an AI expert. At this stage you go beyond using tools to understanding underlying systems, contributing to the community, and building things that have never been built before. The hallmark of an expert is not knowing everything — it's knowing how to learn anything, quickly."},
+  {t:"table",h:"6.1 Advanced AI Concepts",b:"These concepts move you from using AI to understanding and customising it at a deeper level.",cols:["Concept","What it is","Why it matters","Tools/platforms"],rows:[["Fine-Tuning","Training a pre-trained model further on your own dataset","Creates models that perform better on your specific use case than general models","OpenAI Fine-tuning API, Hugging Face, LoRA"],["RAG (Retrieval-Augmented Generation)","Giving AI access to your documents/database at inference time","Solves knowledge cutoff + hallucination — AI answers from verified sources","LangChain, LlamaIndex, Pinecone, Chroma"],["Agentic AI / AI Agents","AI systems that autonomously plan, use tools, and take multi-step actions","Enables fully autonomous workflows — AI that works like a human employee","AutoGPT, CrewAI, LangGraph, OpenAI Assistants API"],["Vector Databases","Databases storing information as mathematical vectors for semantic search","Powers RAG systems — finds relevant info based on meaning, not keywords","Pinecone, Chroma, Weaviate, Qdrant, Supabase pgvector"],["LoRA / RLHF","Parameter-efficient fine-tuning and learning from human feedback","How modern LLMs like ChatGPT and Claude were made to follow instructions safely","Hugging Face PEFT, Axolotl, trl library"]]},
+  {t:"table",h:"6.2 Building AI SaaS Products — Architecture",b:"The next level: building your own software products that use AI APIs under the hood.",cols:["Stack layer","What it does","Technologies"],rows:[["Frontend","What users see and interact with","React, Next.js, Vue, Tailwind CSS, shadcn/ui"],["Backend / API","Handles user requests, business logic, auth, billing","Node.js/Express, Python/FastAPI, Supabase, Firebase"],["AI layer","Calls AI APIs to process user input and generate intelligent output","OpenAI API, Claude API, Gemini API, ElevenLabs, Replicate"],["Database","Stores user data, conversation history, generated content","PostgreSQL, MySQL, MongoDB, Supabase, PlanetScale"],["Vector store","Stores embeddings for semantic search and RAG","Pinecone, Chroma, Supabase pgvector, Weaviate"],["Deployment","Hosts and serves your application to users at scale","Vercel, Netlify, Railway, AWS, Google Cloud, Fly.io"],["Auth & Billing","User authentication and payment processing","Clerk, Auth0, Supabase Auth + Stripe, Lemon Squeezy"]]},
+  {t:"table",h:"6.3 AI Ethics, Safety & Responsible Use",b:"Using AI responsibly is not just philosophical — it protects you legally, builds trust with clients, and ensures the systems you build don't cause harm.",cols:["Ethical issue","What it means","What you should do"],rows:[["Bias & fairness","AI trained on biased data produces biased outputs — reinforcing discrimination","Audit AI outputs for bias; don't use AI alone for high-stakes decisions about people"],["Misinformation","AI can generate convincing false content at massive scale — fake news, deepfakes","Label AI-generated content; verify facts before publishing; don't weaponise AI for deception"],["Privacy","AI systems may store, use, or expose sensitive personal data","Don't input confidential client data into public AI tools without permission; read privacy policies"],["Intellectual property","AI outputs may infringe on others' copyrighted work","Understand usage rights for each tool; don't resell AI art that could infringe; disclose AI use"],["Job displacement","AI will automate many existing jobs, causing economic disruption","Upskill continuously; build AI for humans (augment, don't just replace); advocate for fair transition"]]},
+  {t:"table",h:"6.7 The AI Expert's Mindset",b:"Technical skills get you to practitioner level. The mindset separates practitioners from true experts.",cols:["Principle","What it means"],rows:[["Think in systems, not tools","Amateurs ask 'what tool should I use?' Experts ask 'what system should I build?'"],["Treat AI as a junior colleague","Give it what you'd give a smart intern on day one — specifics, examples, constraints"],["Your competitive advantage is taste","As AI makes creation cheap, curation and judgement become the scarce resource"],["Speed of iteration is the new skill","Launch experiments quickly, kill losers fast, double down on winners"],["The best prompt is the last one","Never accept the first AI output as final — iterate until it's genuinely excellent"],["Document everything","Every prompt that worked becomes your training data, case studies, and IP"]]},
+  {t:"table",h:"6.8 AI Career Pathways",cols:["Career path","Role","Avg salary / rate","Entry path"],rows:[["Corporate","AI Product Manager","$120K–$200K/yr","PM experience + AI certification + portfolio"],["Corporate","ML Engineer","$150K–$250K/yr","CS degree or bootcamp + ML projects on GitHub"],["Corporate","AI Solutions Architect","$180K–$300K/yr","Engineering background + cloud certifications + AI experience"],["Freelance","AI Automation Specialist","$100–$300/hr","Build 5 automations → showcase → Upwork profile"],["Freelance","AI Content Strategist","$80–$200/hr","Content portfolio + AI tools proficiency"],["Entrepreneur","AI SaaS Founder","Unlimited","Identify niche → build MVP → find first 10 customers"],["Educator","AI Trainer / Consultant","$500–$5,000/day","Build audience → create content → sell training"]]},
+  {t:"exercises",h:"Phase 6 — Practical Exercises",milestone:"You can build custom AI solutions, teach AI concepts clearly, and adapt to new models and tools as they emerge.",items:[{task:"Teach something",desc:"Create a tutorial or explainer on one AI concept you understand well. Publish it — blog post, LinkedIn, or YouTube video."},{task:"Build an AI agent",desc:"Using CrewAI, LangGraph, or OpenAI Assistants API, build an agent that autonomously completes a multi-step task."},{task:"Implement RAG",desc:"Build a simple RAG app: upload a PDF → user asks questions → AI answers only from that document. Use LangChain + Chroma."},{task:"Read a research paper",desc:"Find one AI paper on arXiv published in the last 3 months. Read it. Write a plain-English summary explaining the key finding."},{task:"Contribute publicly",desc:"Share something valuable publicly: a prompt pack, a template, a tool, an article, or a tutorial. Get at least one person to use it and give feedback."}]}
+]}
+];
+
+/* flatten */
+const ALL=[];
+PHASES.forEach((ph,pi)=>ph.slides.forEach((sl,si)=>ALL.push({...sl,pi,si,phase:ph})));
+const TOTAL=ALL.length;
+
+/* AI Guide system prompt */
+const GUIDE_SYS=`You are an AI study guide assistant for the AI Creator Academy. Help students understand this 6-phase AI mastery course.
+
+COURSE CONTENT SUMMARY:
+Phase 1 - Foundations (Weeks 1-2): What is AI, AI hierarchy (AI→ML→Deep Learning), history of AI milestones 1950–2024, core terminology (model/training/inference/token/prompt/context window/hallucination/fine-tuning/parameters/multimodal), three categories of AI tools (standalone/integrated/custom API), three types of ML (supervised/unsupervised/reinforcement), how LLMs work (tokenization→embeddings→transformer→training via RLHF), AI vs human intelligence comparison, ANI/AGI/ASI capability levels, generative AI types (LLMs/diffusion/GANs/audio/video/code).
+
+Phase 2 - Prompt Engineering (Weeks 3-4): Why prompting is the #1 AI skill, anatomy of a great prompt (Role/Task/Context/Format/Constraint), prompt frameworks (AIM=Action-Intent-Message, RCF=Role-Context-Format, Chain-of-Thought, Few-Shot, Negative Prompting), advanced patterns (Persona, Iterative Refinement, Socratic Method, Devil's Advocate, Output Scaffolding), common prompt mistakes and fixes, system prompts, building a personal prompt library.
+
+Phase 3 - Essential AI Tools (Weeks 5-8): Writing tools (ChatGPT/Claude/Gemini/Grammarly/Perplexity/Jasper/Copy.ai), image tools (Midjourney/DALL-E 3/Adobe Firefly/Canva AI/Stable Diffusion), video/audio tools (Runway/Synthesia/ElevenLabs/Descript/CapCut/HeyGen), data/productivity tools (ChatGPT Data Analysis/Microsoft Copilot/Notion AI), code tools (Cursor/Bolt.new/Replit/GitHub Copilot/Zapier), tool selection decision framework.
+
+Phase 4 - App Building (Weeks 9-12): Prompting for code best practices, AI IDEs (Bolt.new/Replit/Cursor/Copilot/v0 by Vercel), prompt chaining for complex tasks, automation workflows (Zapier/Make.com/n8n/Airtable+AI), understanding AI limitations (hallucinations/context window/knowledge cutoff/inconsistent outputs/no long-term memory), understanding APIs, AI agent architecture (CrewAI/LangGraph/OpenAI Assistants API), no-code app building workflow.
+
+Phase 5 - Monetization (Weeks 13-16): AI freelancing services and rates ($50–$10,000+ depending on service), platforms (Upwork/Fiverr/Contra/LinkedIn/cold outreach), AI business models (agency/SaaS/digital products/education/consulting), pricing models (hourly/project/retainer/value-based/productised), the 90-day first client plan, writing winning AI proposals, model A (content agency) and model B (automation agency) business blueprints.
+
+Phase 6 - Mastery (Ongoing): Advanced concepts (fine-tuning/RAG/AI agents/vector databases/LoRA/RLHF), building AI SaaS products (frontend/backend/AI layer/database/vector store/deployment/auth), AI ethics (bias/misinformation/privacy/IP/job displacement), staying current (TLDR AI/The Batch/arXiv/Hugging Face), AI expert mindset (think in systems/treat AI as junior colleague/taste as advantage/iteration speed/iterate prompts/document everything), AI career pathways (product manager/ML engineer/solutions architect/freelance specialist/content strategist/SaaS founder/educator).
+
+INSTRUCTIONS:
+- Prioritise explaining concepts from the course notes above
+- Give clear, concise explanations with examples and analogies
+- You are a tutor — be encouraging, educational, and specific
+- If asked something beyond the course, you can draw on general AI knowledge
+- Keep responses focused and helpful — aim for clarity over comprehensiveness`;
+
+/* ── COMPONENTS ── */
+
+function Note({note,color}){
+  if(!note)return null;
+  const c=ph(color);
+  return <div style={{background:c.bg,border:`1.5px solid ${c.border}`,borderLeft:`4px solid ${c.accent}`,borderRadius:8,padding:"14px 18px",marginTop:20}}>
+    <span style={{fontWeight:700,color:c.text,fontSize:12,textTransform:"uppercase",letterSpacing:1}}>{note.l}: </span>
+    <span style={{color:T.ink,fontSize:15,lineHeight:1.7}}>{note.t}</span>
+  </div>;
+}
+
+function STitle({sl}){
+  const c=ph(sl.phase.color);
+  return <div style={{height:"100%",display:"flex",flexDirection:"column",justifyContent:"center",padding:"2.5rem 3rem",background:c.bg,animation:"fadeIn .3s ease",overflowY:"auto"}}>
+    <div style={{display:"inline-block",background:c.accent,color:"#fff",borderRadius:4,padding:"4px 14px",fontSize:12,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",marginBottom:20,width:"fit-content"}}>Phase {sl.phase.n}</div>
+    <h1 style={{fontSize:"clamp(1.8rem,3.5vw,2.8rem)",fontWeight:800,color:c.text,margin:"0 0 10px",lineHeight:1.1,fontFamily:"Georgia,serif"}}>{sl.h}</h1>
+    <p style={{fontSize:15,color:c.text,opacity:.75,margin:"0 0 28px",fontWeight:500}}>{sl.s}</p>
+    <p style={{fontSize:16,lineHeight:1.9,color:T.ink,maxWidth:620}}>{sl.b}</p>
+    <div style={{marginTop:28,display:"flex",gap:12,alignItems:"center"}}>
+      <span style={{fontWeight:700,color:c.accent,fontSize:14}}>{sl.phase.weeks}</span>
+      <span style={{color:T.muted}}>·</span>
+      <span style={{color:T.muted,fontSize:14}}>{sl.phase.sub}</span>
+    </div>
+  </div>;
+}
+
+function SContent({sl}){
+  return <div style={{padding:"2.5rem 3rem",overflowY:"auto",height:"100%",boxSizing:"border-box",animation:"fadeIn .3s ease"}}>
+    <h2 style={{fontSize:"clamp(1.1rem,2vw,1.55rem)",fontWeight:700,color:T.navy,margin:"0 0 18px",fontFamily:"Georgia,serif"}}>{sl.h}</h2>
+    {sl.b&&sl.b.split("\n\n").map((p,i)=><p key={i} style={{fontSize:15,lineHeight:1.9,color:"#2C2C2C",margin:"0 0 16px"}}>{p}</p>)}
+    {sl.code&&<pre style={{background:T.navy,color:"#A8D8B9",padding:20,borderRadius:8,fontSize:13,lineHeight:1.7,overflowX:"auto",margin:"16px 0",whiteSpace:"pre-wrap",fontFamily:"'Courier New',monospace"}}>{sl.code}</pre>}
+    <Note note={sl.note} color={sl.phase.color}/>
+  </div>;
+}
+
+function STable({sl}){
+  return <div style={{padding:"2rem 2.5rem",overflowY:"auto",height:"100%",boxSizing:"border-box",animation:"fadeIn .3s ease"}}>
+    <h2 style={{fontSize:"clamp(1rem,1.8vw,1.4rem)",fontWeight:700,color:T.navy,margin:"0 0 8px",fontFamily:"Georgia,serif"}}>{sl.h}</h2>
+    {sl.b&&<p style={{fontSize:14,color:T.muted,margin:"0 0 16px",lineHeight:1.6}}>{sl.b}</p>}
+    <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+        <thead><tr style={{background:T.navy}}>
+          {sl.cols.map((c,i)=><th key={i} style={{color:"#fff",padding:"10px 14px",textAlign:"left",fontWeight:600,whiteSpace:"nowrap",fontSize:13}}>{c}</th>)}
+        </tr></thead>
+        <tbody>{sl.rows.map((row,ri)=><tr key={ri} style={{background:ri%2===0?T.white:T.paper}}>
+          {row.map((cell,ci)=><td key={ci} style={{padding:"9px 14px",color:T.ink,lineHeight:1.5,borderBottom:`1px solid ${T.pb}`,fontSize:13,verticalAlign:"top"}}>{cell}</td>)}
+        </tr>)}</tbody>
+      </table>
+    </div>
+    <Note note={sl.note} color={sl.phase.color}/>
+  </div>;
+}
+
+function STimeline({sl}){
+  const c=ph(sl.phase.color);
+  return <div style={{padding:"2rem 2.5rem",overflowY:"auto",height:"100%",boxSizing:"border-box",animation:"fadeIn .3s ease"}}>
+    <h2 style={{fontSize:"clamp(1rem,1.8vw,1.4rem)",fontWeight:700,color:T.navy,margin:"0 0 8px",fontFamily:"Georgia,serif"}}>{sl.h}</h2>
+    {sl.b&&<p style={{fontSize:14,color:T.muted,margin:"0 0 24px"}}>{sl.b}</p>}
+    <div style={{position:"relative",paddingLeft:28}}>
+      <div style={{position:"absolute",left:9,top:0,bottom:0,width:2,background:c.accent,borderRadius:1}}/>
+      {sl.items.map((item,i)=><div key={i} style={{position:"relative",marginBottom:18}}>
+        <div style={{position:"absolute",left:-23,top:5,width:12,height:12,borderRadius:"50%",background:c.accent,border:`2px solid ${T.white}`,boxShadow:`0 0 0 2px ${c.accent}`}}/>
+        <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
+          <span style={{fontSize:11,fontWeight:800,color:c.accent,minWidth:36,fontFamily:"monospace"}}>{item.y}</span>
+          <span style={{fontWeight:700,color:T.navy,fontSize:14}}>{item.l}</span>
+        </div>
+        <p style={{color:"#555",fontSize:13,margin:"4px 0 0 46px",lineHeight:1.6}}>{item.d}</p>
+      </div>)}
+    </div>
+  </div>;
+}
+
+function SExercises({sl}){
+  const c=ph(sl.phase.color);
+  return <div style={{padding:"2rem 2.5rem",overflowY:"auto",height:"100%",boxSizing:"border-box",animation:"fadeIn .3s ease"}}>
+    <h2 style={{fontSize:"clamp(1rem,1.8vw,1.4rem)",fontWeight:700,color:T.navy,margin:"0 0 20px",fontFamily:"Georgia,serif"}}>{sl.h}</h2>
+    <div style={{display:"grid",gap:10}}>
+      {sl.items.map((item,i)=><div key={i} style={{display:"flex",gap:12,background:T.paper,border:`1px solid ${T.pb}`,borderRadius:10,padding:"12px 14px"}}>
+        <div style={{minWidth:26,height:26,background:c.accent,color:"#fff",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:12,flexShrink:0}}>{i+1}</div>
+        <div>
+          <div style={{fontWeight:700,color:T.navy,fontSize:14}}>{item.task}</div>
+          <div style={{color:"#555",fontSize:13,marginTop:3,lineHeight:1.6}}>{item.desc}</div>
+          {item.time&&<div style={{fontSize:12,color:c.accent,fontWeight:600,marginTop:5}}>⏱ {item.time}</div>}
+        </div>
+      </div>)}
+    </div>
+    {sl.milestone&&<div style={{marginTop:20,background:c.bg,border:`1.5px solid ${c.accent}`,borderRadius:10,padding:"12px 16px"}}>
+      <div style={{fontWeight:800,color:c.text,fontSize:11,textTransform:"uppercase",letterSpacing:1,marginBottom:5}}>✓ Phase Milestone</div>
+      <div style={{color:T.ink,fontSize:14,lineHeight:1.7}}>{sl.milestone}</div>
+    </div>}
+  </div>;
+}
+
+function SlideRender({sl}){
+  if(!sl)return null;
+  if(sl.t==="title")return <STitle sl={sl}/>;
+  if(sl.t==="table")return <STable sl={sl}/>;
+  if(sl.t==="timeline")return <STimeline sl={sl}/>;
+  if(sl.t==="exercises")return <SExercises sl={sl}/>;
+  return <SContent sl={sl}/>;
+}
+
+/* AI GUIDE */
+function AIGuide({curSlide,onClose}){
+  const [msgs,setMsgs]=useState([{r:"a",c:"Hi! I'm your AI study guide 👋\n\nAsk me anything about the course — I'll explain concepts, give examples, and help you understand the material. What would you like to know?"}]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const bottomRef=useRef(null);
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
+  async function send(){
+    const q=input.trim();if(!q||loading)return;
+    const ctx=curSlide?`\n[Student currently viewing: "${curSlide.h}" in Phase ${curSlide.phase.n}: ${curSlide.phase.title}]`:"";
+    const hist=msgs.slice(1).map(m=>({role:m.r==="u"?"user":"assistant",content:m.c}));
+    setMsgs(p=>[...p,{r:"u",c:q}]);setInput("");setLoading(true);
+    try{const rep=await callClaude(GUIDE_SYS,q+ctx,hist);setMsgs(p=>[...p,{r:"a",c:rep}]);}
+    catch{setMsgs(p=>[...p,{r:"a",c:"Sorry, couldn't connect. Please try again."}]);}
+    setLoading(false);
+  }
+  return <div style={{position:"fixed",bottom:20,right:20,width:350,height:480,background:T.white,border:`1px solid ${T.pb}`,borderRadius:16,boxShadow:"0 8px 32px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",zIndex:1000,overflow:"hidden"}}>
+    <div style={{background:T.navy,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:30,height:30,background:T.amber,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>🤖</div>
+        <div><div style={{color:"#fff",fontWeight:700,fontSize:13}}>AI Study Guide</div><div style={{color:"rgba(255,255,255,0.55)",fontSize:11}}>Ask anything about the course</div></div>
+      </div>
+      <button onClick={onClose} style={{background:"none",border:"none",color:"rgba(255,255,255,.7)",fontSize:22,cursor:"pointer",lineHeight:1,padding:4}}>×</button>
+    </div>
+    <div style={{flex:1,overflowY:"auto",padding:12,display:"flex",flexDirection:"column",gap:10}}>
+      {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.r==="u"?"flex-end":"flex-start"}}>
+        <div style={{maxWidth:"85%",background:m.r==="u"?T.navy:T.paper,color:m.r==="u"?"#fff":T.ink,borderRadius:m.r==="u"?"12px 12px 3px 12px":"12px 12px 12px 3px",padding:"9px 13px",fontSize:13,lineHeight:1.65,whiteSpace:"pre-wrap"}}>{m.c}</div>
+      </div>)}
+      {loading&&<div style={{display:"flex",justifyContent:"flex-start"}}>
+        <div style={{background:T.paper,borderRadius:"12px 12px 12px 3px",padding:"10px 14px",display:"flex",gap:4}}>
+          {[0,1,2].map(i=><span key={i} style={{width:6,height:6,borderRadius:"50%",background:T.muted,display:"inline-block",animation:`pulse 1.2s ${i*.2}s infinite`}}/>)}
+        </div>
+      </div>}
+      <div ref={bottomRef}/>
+    </div>
+    <div style={{padding:"10px 12px",borderTop:`1px solid ${T.pb}`,display:"flex",gap:8,flexShrink:0}}>
+      <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),send())} placeholder="Ask a question..." style={{flex:1,border:`1px solid ${T.pb}`,borderRadius:8,padding:"8px 11px",fontSize:13,outline:"none",background:T.paper}}/>
+      <button onClick={send} disabled={!input.trim()||loading} style={{background:T.navy,color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontWeight:700,cursor:"pointer",fontSize:13,opacity:!input.trim()||loading?.5:1}}>Send</button>
+    </div>
+  </div>;
+}
+
+/* ASSIGNMENT PANEL */
+function AssignPanel({student,phaseIdx,onClose}){
+  const phase=PHASES[phaseIdx];
+  const [file,setFile]=useState(null);
+  const [note,setNote]=useState("");
+  const [done,setDone]=useState(false);
+  const [existing,setExisting]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const fRef=useRef(null);
+  const key=`asgn_${student}_${phase.id}`;
+  useEffect(()=>{stGet(key).then(d=>{if(d)setExisting(d);setLoading(false);});},[]);
+  async function submit(){
+    if(!file&&!note.trim())return;setLoading(true);
+    let fd=null;
+    if(file)fd=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res({name:file.name,type:file.type,size:file.size,data:r.result});r.onerror=rej;r.readAsDataURL(file);});
+    const sub={student,phaseId:phase.id,phaseTitle:phase.title,note,file:fd,at:new Date().toISOString(),score:null,feedback:null};
+    await stSet(key,sub);setDone(true);setLoading(false);
+  }
+  if(loading)return <div style={{padding:40,textAlign:"center",color:T.muted}}>Loading…</div>;
+  const c=ph(phase.color);
+  if(existing?.score!=null)return <div style={{padding:24}}>
+    <h3 style={{margin:"0 0 16px",color:T.navy}}>Your Score — {phase.title}</h3>
+    <div style={{background:c.bg,border:`2px solid ${c.accent}`,borderRadius:12,padding:20,textAlign:"center",marginBottom:16}}>
+      <div style={{fontSize:48,fontWeight:800,color:c.accent}}>{existing.score}<span style={{fontSize:20}}>/100</span></div>
+    </div>
+    {existing.feedback&&<div style={{background:T.paper,borderRadius:10,padding:16,border:`1px solid ${T.pb}`}}>
+      <div style={{fontWeight:700,color:T.navy,marginBottom:6,fontSize:13}}>Instructor Feedback</div>
+      <p style={{color:T.ink,lineHeight:1.7,margin:0,fontSize:14}}>{existing.feedback}</p>
+    </div>}
+    <button onClick={onClose} style={{marginTop:16,background:T.navy,color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",cursor:"pointer",fontWeight:700}}>Close</button>
+  </div>;
+  if(existing||done)return <div style={{padding:24,textAlign:"center"}}>
+    <div style={{fontSize:44,marginBottom:12}}>✅</div>
+    <h3 style={{color:T.teal}}>Assignment Submitted!</h3>
+    <p style={{color:T.muted,marginTop:10,fontSize:14}}>Your assignment for <strong>{phase.title}</strong> has been submitted. Your instructor will review and score it soon.</p>
+    <button onClick={onClose} style={{background:T.navy,color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",cursor:"pointer",fontWeight:700,marginTop:14}}>Close</button>
+  </div>;
+  return <div style={{padding:24}}>
+    <h3 style={{margin:"0 0 4px",color:T.navy}}>Submit Assignment</h3>
+    <p style={{color:T.muted,margin:"0 0 20px",fontSize:13}}>Phase {phase.n}: {phase.title} · {phase.weeks}</p>
+    <div style={{background:T.paper,borderRadius:10,padding:14,marginBottom:16,border:`1px solid ${T.pb}`}}>
+      <div style={{fontWeight:700,color:T.navy,marginBottom:6,fontSize:13}}>What to submit</div>
+      <p style={{color:T.ink,fontSize:13,margin:0,lineHeight:1.6}}>Upload a PDF, image, or document showing your completed exercises. You can also add written notes explaining your work.</p>
+    </div>
+    <div style={{marginBottom:14}}>
+      <label style={{display:"block",fontWeight:600,color:T.navy,marginBottom:7,fontSize:13}}>Upload file (PDF, image, or doc)</label>
+      <input ref={fRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e=>setFile(e.target.files[0])} style={{display:"none"}}/>
+      <button onClick={()=>fRef.current.click()} style={{background:file?c.bg:T.paper,border:`1.5px dashed ${file?c.accent:T.pb}`,borderRadius:10,padding:"16px 20px",width:"100%",cursor:"pointer",color:file?c.text:T.muted,fontWeight:600,fontSize:13}}>
+        {file?`✓ ${file.name}`:"Click to choose file"}
+      </button>
+    </div>
+    <div style={{marginBottom:18}}>
+      <label style={{display:"block",fontWeight:600,color:T.navy,marginBottom:7,fontSize:13}}>Notes (optional)</label>
+      <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Add notes about your work, tools used, or questions for your instructor..." rows={4} style={{width:"100%",border:`1px solid ${T.pb}`,borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"inherit",resize:"vertical",background:T.paper,boxSizing:"border-box"}}/>
+    </div>
+    <div style={{display:"flex",gap:10}}>
+      <button onClick={submit} disabled={!file&&!note.trim()||loading} style={{flex:1,background:T.navy,color:"#fff",border:"none",borderRadius:8,padding:"11px",fontWeight:700,cursor:"pointer",opacity:!file&&!note.trim()?.5:1}}>{loading?"Submitting…":"Submit Assignment"}</button>
+      <button onClick={onClose} style={{background:T.paper,color:T.ink,border:`1px solid ${T.pb}`,borderRadius:8,padding:"11px 18px",cursor:"pointer",fontWeight:600}}>Cancel</button>
+    </div>
+  </div>;
+}
+
+/* ADMIN PANEL */
+function Admin({onLogout}){
+  const [subs,setSubs]=useState([]);
+  const [sel,setSel]=useState(null);
+  const [score,setScore]=useState("");
+  const [fb,setFb]=useState("");
+  const [aiSug,setAiSug]=useState(null);
+  const [aiLoad,setAiLoad]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [loading,setLoading]=useState(true);
+  const [tab,setTab]=useState("subs");
+  const [students,setStudents]=useState(ROSTER);
+  const [newS,setNewS]=useState("");
+
+  useEffect(()=>{
+    stGet("students_list").then(s=>{if(s&&s.length)setStudents(s);});
+    loadAll();
+  },[]);
+
+  async function loadAll(){
+    setLoading(true);const found=[];
+    const sList=await stGet("students_list")||students;
+    for(const s of sList){for(const p of PHASES){const d=await stGet(`asgn_${s}_${p.id}`);if(d)found.push({key:`asgn_${s}_${p.id}`,...d});}}
+    setSubs(found);setLoading(false);
+  }
+  function selSub(sub){setSel(sub);setScore(sub.score!=null?String(sub.score):"");setFb(sub.feedback||"");setAiSug(null);setSaved(false);}
+  async function getAI(){
+    if(!sel)return;setAiLoad(true);setAiSug(null);
+    const prompt=`You are an AI course instructor grading assistant. A student submitted their Phase "${sel.phaseTitle}" assignment.\nStudent notes: "${sel.note||"(none provided)"}"\nFile submitted: ${sel.file?`Yes — "${sel.file.name}"`:"No file"}\n\nProvide a fair score out of 100 and 2-3 sentences of constructive, encouraging feedback.\nRespond ONLY with valid JSON (no markdown, no backticks): {"score":75,"feedback":"Your feedback here."}`;
+    try{
+      const r=await callClaude("You are a helpful AI course grading assistant. Respond only with valid JSON.",prompt);
+      const clean=r.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+      setAiSug(parsed);setScore(String(parsed.score));setFb(parsed.feedback);
+    }catch{setAiSug({err:"Could not generate suggestion. Please score manually."});}
+    setAiLoad(false);
+  }
+  async function saveGrade(){
+    if(!sel||!score)return;setSaving(true);
+    const upd={...sel,score:parseInt(score),feedback:fb};
+    await stSet(sel.key,upd);setSubs(prev=>prev.map(s=>s.key===sel.key?upd:s));setSel(upd);setSaved(true);setSaving(false);
+  }
+  async function addStudent(){
+    const name=newS.trim();if(!name||students.includes(name))return;
+    const upd=[...students,name];setStudents(upd);await stSet("students_list",upd);setNewS("");
+  }
+  const pending=subs.filter(s=>s.score==null);
+  const graded=subs.filter(s=>s.score!=null);
+
+  return <div style={{minHeight:"100vh",background:"#F0F2F5",fontFamily:"system-ui,sans-serif"}}>
+    <div style={{background:T.navy,padding:"15px 28px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:36,height:36,background:T.amber,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#fff",fontSize:18}}>A</div>
+        <div><div style={{color:"#fff",fontWeight:800,fontSize:16}}>Admin Panel</div><div style={{color:"rgba(255,255,255,.5)",fontSize:12}}>AI Creator Academy</div></div>
+      </div>
+      <button onClick={onLogout} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontWeight:600}}>Sign out</button>
+    </div>
+    <div style={{padding:"20px 24px",maxWidth:1050,margin:"0 auto"}}>
+      <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
+        {[{id:"subs",l:"📋 Submissions",n:subs.length},{id:"students",l:"👥 Students",n:students.length}].map(tb=>(
+          <button key={tb.id} onClick={()=>setTab(tb.id)} style={{background:tab===tb.id?T.navy:T.white,color:tab===tb.id?"#fff":T.ink,border:`1px solid ${T.pb}`,borderRadius:8,padding:"9px 18px",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:8}}>
+            {tb.l}<span style={{background:tab===tb.id?T.amber:"#E9E9E9",color:tab===tb.id?"#fff":T.ink,borderRadius:12,padding:"1px 8px",fontSize:12,fontWeight:700}}>{tb.n}</span>
+          </button>
+        ))}
+        <button onClick={loadAll} style={{marginLeft:"auto",background:T.white,border:`1px dashed ${T.pb}`,borderRadius:8,padding:"9px 16px",cursor:"pointer",color:T.muted,fontWeight:600,fontSize:13}}>↻ Refresh</button>
+      </div>
+
+      {tab==="students"&&<div style={{background:T.white,borderRadius:12,border:`1px solid ${T.pb}`,padding:22}}>
+        <h3 style={{margin:"0 0 18px",color:T.navy}}>Student Roster</h3>
+        <div style={{display:"flex",gap:10,marginBottom:18}}>
+          <input value={newS} onChange={e=>setNewS(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addStudent()} placeholder="Add student name..." style={{flex:1,border:`1px solid ${T.pb}`,borderRadius:8,padding:"10px 13px",fontSize:14,background:T.paper}}/>
+          <button onClick={addStudent} style={{background:T.navy,color:"#fff",border:"none",borderRadius:8,padding:"10px 18px",cursor:"pointer",fontWeight:700}}>Add</button>
+        </div>
+        <div style={{display:"grid",gap:8}}>
+          {students.map((s,i)=><div key={i} style={{background:T.paper,borderRadius:8,padding:"11px 15px",display:"flex",alignItems:"center",gap:11}}>
+            <div style={{width:34,height:34,borderRadius:"50%",background:T.navy,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14}}>{s[0]}</div>
+            <span style={{fontWeight:600,color:T.navy}}>{s}</span>
+            <span style={{marginLeft:"auto",fontSize:12,color:T.muted}}>{subs.filter(sub=>sub.student===s).length} submission(s)</span>
+          </div>)}
+        </div>
+      </div>}
+
+      {tab==="subs"&&<div style={{display:"grid",gridTemplateColumns:sel?"1fr 1.2fr":"1fr",gap:18,alignItems:"start"}}>
+        <div>
+          {loading?<div style={{textAlign:"center",padding:40,color:T.muted}}>Loading submissions…</div>:<>
+            {pending.length>0&&<div style={{marginBottom:18}}>
+              <div style={{fontWeight:700,color:T.red,fontSize:12,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>⏳ Pending ({pending.length})</div>
+              {pending.map((sub,i)=><div key={i} onClick={()=>selSub(sub)} style={{background:T.white,border:`1.5px solid ${sel?.key===sub.key?T.navy:T.pb}`,borderRadius:10,padding:"13px 15px",marginBottom:7,cursor:"pointer"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontWeight:700,color:T.navy}}>{sub.student}</div>
+                  <div style={{background:T.redL,color:T.red,borderRadius:6,padding:"2px 9px",fontSize:12,fontWeight:700}}>Ungraded</div>
+                </div>
+                <div style={{color:T.muted,fontSize:13,marginTop:3}}>{sub.phaseTitle}</div>
+                <div style={{color:T.muted,fontSize:12,marginTop:2}}>Submitted {new Date(sub.at).toLocaleDateString()}</div>
+              </div>)}
+            </div>}
+            {graded.length>0&&<div>
+              <div style={{fontWeight:700,color:T.teal,fontSize:12,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>✓ Graded ({graded.length})</div>
+              {graded.map((sub,i)=><div key={i} onClick={()=>selSub(sub)} style={{background:T.white,border:`1.5px solid ${sel?.key===sub.key?T.navy:T.pb}`,borderRadius:10,padding:"13px 15px",marginBottom:7,cursor:"pointer"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontWeight:700,color:T.navy}}>{sub.student}</div>
+                  <div style={{background:T.tealL,color:T.teal,borderRadius:6,padding:"2px 9px",fontSize:12,fontWeight:700}}>{sub.score}/100</div>
+                </div>
+                <div style={{color:T.muted,fontSize:13,marginTop:3}}>{sub.phaseTitle}</div>
+              </div>)}
+            </div>}
+            {subs.length===0&&<div style={{textAlign:"center",padding:44,color:T.muted,background:T.white,borderRadius:12,border:`1px solid ${T.pb}`}}>No submissions yet. Students submit from the lesson view.</div>}
+          </>}
+        </div>
+
+        {sel&&<div style={{background:T.white,borderRadius:12,border:`1px solid ${T.pb}`,overflow:"hidden"}}>
+          <div style={{background:T.navy,padding:"15px 18px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div><div style={{color:"#fff",fontWeight:700}}>{sel.student}</div><div style={{color:"rgba(255,255,255,.6)",fontSize:13}}>{sel.phaseTitle}</div></div>
+            <button onClick={()=>setSel(null)} style={{background:"none",border:"none",color:"rgba(255,255,255,.7)",fontSize:22,cursor:"pointer"}}>×</button>
+          </div>
+          <div style={{padding:18}}>
+            {sel.note&&<div style={{background:T.paper,borderRadius:8,padding:13,marginBottom:14,border:`1px solid ${T.pb}`}}>
+              <div style={{fontWeight:700,color:T.navy,fontSize:13,marginBottom:5}}>Student Notes</div>
+              <p style={{margin:0,color:T.ink,fontSize:13,lineHeight:1.6}}>{sel.note}</p>
+            </div>}
+            {sel.file&&<div style={{background:T.amberL,borderRadius:8,padding:11,marginBottom:14,border:"1px solid #F5D98B",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:18}}>📎</span>
+              <div><div style={{fontWeight:600,color:T.ink,fontSize:13}}>{sel.file.name}</div><div style={{fontSize:12,color:T.muted}}>{(sel.file.size/1024).toFixed(1)} KB</div></div>
+              {sel.file.data&&<a href={sel.file.data} download={sel.file.name} style={{marginLeft:"auto",background:T.navy,color:"#fff",borderRadius:6,padding:"5px 11px",fontSize:12,fontWeight:700,textDecoration:"none"}}>Download</a>}
+            </div>}
+            <button onClick={getAI} disabled={aiLoad} style={{width:"100%",background:"linear-gradient(135deg,#1B2A41,#2D7DD2)",color:"#fff",border:"none",borderRadius:8,padding:"11px",fontWeight:700,cursor:"pointer",fontSize:14,marginBottom:12,opacity:aiLoad?.7:1}}>
+              {aiLoad?"🤖 Generating AI suggestion…":"🤖 Get AI Score Suggestion"}
+            </button>
+            {aiSug&&!aiSug.err&&<div style={{background:"#EAF3FD",border:"1.5px solid #AECFF0",borderRadius:8,padding:12,marginBottom:14}}>
+              <div style={{fontWeight:700,color:"#0D3E74",fontSize:12,marginBottom:4}}>🤖 AI Suggestion (auto-filled below)</div>
+              <div style={{color:"#185FA5",fontSize:14}}>Suggested score: <strong>{aiSug.score}/100</strong></div>
+            </div>}
+            {aiSug?.err&&<div style={{color:T.red,fontSize:13,marginBottom:12,padding:10,background:T.redL,borderRadius:8}}>{aiSug.err}</div>}
+            <div style={{marginBottom:12}}>
+              <label style={{display:"block",fontWeight:700,color:T.navy,marginBottom:7,fontSize:13}}>Score (out of 100)</label>
+              <input type="number" min="0" max="100" value={score} onChange={e=>setScore(e.target.value)} style={{width:"100%",border:`1.5px solid ${T.pb}`,borderRadius:8,padding:"10px 13px",fontSize:18,fontWeight:700,color:T.navy,background:T.paper,boxSizing:"border-box"}}/>
+            </div>
+            <div style={{marginBottom:18}}>
+              <label style={{display:"block",fontWeight:700,color:T.navy,marginBottom:7,fontSize:13}}>Feedback for Student</label>
+              <textarea value={fb} onChange={e=>setFb(e.target.value)} rows={4} placeholder="Write your feedback here..." style={{width:"100%",border:`1px solid ${T.pb}`,borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"inherit",resize:"vertical",background:T.paper,boxSizing:"border-box"}}/>
+            </div>
+            <button onClick={saveGrade} disabled={!score||saving} style={{width:"100%",background:saved?T.teal:T.navy,color:"#fff",border:"none",borderRadius:8,padding:"12px",fontWeight:800,cursor:"pointer",fontSize:15}}>
+              {saving?"Saving…":saved?"✓ Grade Saved!":"Save Grade"}
+            </button>
+          </div>
+        </div>}
+      </div>}
+    </div>
+  </div>;
+}
+
+/* DASHBOARD */
+function Dashboard({student,onEnter,progress,assignments}){
+  const done=Object.values(progress).filter(Boolean).length;
+  const pct=Math.round((done/TOTAL)*100);
+  return <div style={{maxWidth:750,margin:"0 auto",padding:"26px 18px"}}>
+    <div style={{marginBottom:24}}>
+      <h1 style={{fontSize:"clamp(1.3rem,3vw,1.8rem)",fontWeight:800,color:T.navy,margin:"0 0 5px",fontFamily:"Georgia,serif"}}>Welcome back, {student} 👋</h1>
+      <p style={{color:T.muted,margin:"0 0 18px",fontSize:14}}>AI Creator Academy · 6 phases · 16 weeks</p>
+      <div style={{background:T.white,borderRadius:12,border:`1px solid ${T.pb}`,padding:"16px 20px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9}}>
+          <span style={{fontWeight:700,color:T.navy,fontSize:14}}>Overall Progress</span>
+          <span style={{fontWeight:800,color:T.amber,fontSize:22}}>{pct}%</span>
+        </div>
+        <div style={{background:T.paper,borderRadius:999,height:10,overflow:"hidden"}}>
+          <div style={{background:`linear-gradient(90deg,${T.amber},#E8A24D)`,height:"100%",width:`${pct}%`,borderRadius:999,transition:"width .5s ease"}}/>
+        </div>
+        <div style={{color:T.muted,fontSize:13,marginTop:7}}>{done} of {TOTAL} slides completed</div>
+      </div>
+    </div>
+    <div style={{display:"grid",gap:11}}>
+      {PHASES.map((phase,i)=>{
+        const c=ph(phase.color);
+        const phSl=ALL.filter(s=>s.pi===i);
+        const phDone=phSl.filter(s=>progress[`${i}_${s.si}`]).length;
+        const ppct=Math.round((phDone/phSl.length)*100);
+        const hasA=assignments[phase.id];
+        const isGraded=hasA?.score!=null;
+        return <div key={phase.id} onClick={()=>onEnter(i)} style={{background:T.white,border:`1.5px solid ${T.pb}`,borderRadius:13,padding:"15px 17px",cursor:"pointer",display:"flex",alignItems:"center",gap:13,transition:"border-color .2s,transform .1s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=c.accent;e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.pb;e.currentTarget.style.transform="translateY(0)";}}>
+          <div style={{width:44,height:44,background:c.accent,borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#fff",fontSize:18,flexShrink:0}}>{phase.n}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
+              <div style={{fontWeight:800,color:T.navy,fontSize:15}}>{phase.title}</div>
+              {isGraded&&<span style={{background:T.tealL,color:T.teal,borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:800}}>{hasA.score}/100</span>}
+              {hasA&&!isGraded&&<span style={{background:T.amberL,color:T.amber,borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:800}}>Submitted</span>}
+            </div>
+            <div style={{color:T.muted,fontSize:13,marginBottom:7}}>{phase.sub} · {phase.weeks}</div>
+            <div style={{background:T.paper,borderRadius:999,height:5,overflow:"hidden"}}>
+              <div style={{background:c.accent,height:"100%",width:`${ppct}%`,borderRadius:999,transition:"width .4s ease"}}/>
+            </div>
+          </div>
+          <div style={{color:c.accent,fontWeight:800,fontSize:13,minWidth:32,textAlign:"right"}}>{ppct}%</div>
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+/* LESSON VIEW */
+function Lesson({student,initPhase,onBack,progress,onProgress,assignments,onAssignment}){
+  const startIdx=ALL.findIndex(s=>s.pi===initPhase);
+  const [idx,setIdx]=useState(startIdx>=0?startIdx:0);
+  const [showGuide,setShowGuide]=useState(false);
+  const [showAssign,setShowAssign]=useState(false);
+  const [sidebar,setSidebar]=useState(true);
+  const sl=ALL[idx];
+  useEffect(()=>{if(sl)onProgress(`${sl.pi}_${sl.si}`);},[idx]);
+  function go(d){const n=idx+d;if(n>=0&&n<TOTAL)setIdx(n);}
+  function jumpPhase(pi){const i=ALL.findIndex(s=>s.pi===pi);if(i>=0)setIdx(i);}
+  const curPhase=sl?.phase;
+  const c=curPhase?ph(curPhase.color):PC.purple;
+  const phSl=curPhase?ALL.filter(s=>s.pi===sl.pi):[];
+  const slInPh=phSl.findIndex(s=>ALL.indexOf(s)===idx);
+  const hasA=assignments[curPhase?.id];
+  const isGraded=hasA?.score!=null;
+  return <div style={{display:"flex",height:"100vh",fontFamily:"system-ui,sans-serif",overflow:"hidden"}}>
+    {/* Sidebar */}
+    {sidebar&&<div style={{width:215,background:T.navy,display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"}}>
+      <div style={{padding:"13px 11px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+        <button onClick={onBack} style={{background:"rgba(255,255,255,.1)",border:"none",color:"rgba(255,255,255,.7)",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12,fontWeight:600,width:"100%",textAlign:"left"}}>← Dashboard</button>
+      </div>
+      <div style={{padding:"7px 0",flex:1}}>
+        {PHASES.map((phase,pi)=>{
+          const pc2=ph(phase.color);
+          const isAct=sl?.pi===pi;
+          const phSl2=ALL.filter(s=>s.pi===pi);
+          return <div key={phase.id}>
+            <button onClick={()=>jumpPhase(pi)} style={{width:"100%",background:isAct?"rgba(255,255,255,.08)":"none",border:"none",color:isAct?"#fff":"rgba(255,255,255,.5)",padding:"8px 11px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,textAlign:"left"}}>
+              <div style={{width:23,height:23,background:isAct?pc2.accent:"rgba(255,255,255,.1)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>{phase.n}</div>
+              <div style={{fontSize:12,fontWeight:isAct?700:400,lineHeight:1.3}}>
+                <div>{phase.title}</div>
+                <div style={{fontSize:10,opacity:.6,fontWeight:400}}>{phase.weeks}</div>
+              </div>
+            </button>
+            {isAct&&<div style={{paddingLeft:42,paddingRight:5,paddingBottom:4}}>
+              {phSl2.map((ps,psi)=>{
+                const gi=ALL.indexOf(ps);
+                const isCur=gi===idx;
+                const isDone=progress[`${ps.pi}_${ps.si}`];
+                return <button key={psi} onClick={()=>setIdx(gi)} style={{width:"100%",background:isCur?pc2.accent:"none",border:"none",color:isCur?"#fff":isDone?"rgba(255,255,255,.7)":"rgba(255,255,255,.35)",padding:"4px 8px",cursor:"pointer",borderRadius:5,textAlign:"left",fontSize:11,fontWeight:isCur?700:400,display:"flex",alignItems:"center",gap:5,marginBottom:1}}>
+                  <span style={{fontSize:9}}>{isDone&&!isCur?"✓":isCur?"▶":"○"}</span>
+                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ps.h?.slice(0,27)}{ps.h?.length>27?"…":""}</span>
+                </button>;
+              })}
+            </div>}
+          </div>;
+        })}
+      </div>
+    </div>}
+    {/* Main */}
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      {/* Top bar */}
+      <div style={{background:T.white,borderBottom:`1px solid ${T.pb}`,padding:"9px 15px",display:"flex",alignItems:"center",gap:11,flexShrink:0}}>
+        <button onClick={()=>setSidebar(!sidebar)} style={{background:T.paper,border:`1px solid ${T.pb}`,borderRadius:6,padding:"6px 10px",cursor:"pointer",color:T.ink,fontSize:14}}>☰</button>
+        <div style={{flex:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{background:c.accent,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700}}>Phase {curPhase?.n}</span>
+            <span style={{color:T.muted,fontSize:13}}>{slInPh+1} of {phSl.length}</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          {curPhase&&<button onClick={()=>setShowAssign(true)} style={{background:isGraded?T.tealL:T.amberL,color:isGraded?T.teal:T.amber,border:`1px solid ${isGraded?T.teal:T.amber}`,borderRadius:8,padding:"7px 13px",cursor:"pointer",fontWeight:700,fontSize:13}}>
+            {isGraded?`✓ ${hasA.score}/100`:hasA?"Submitted ✓":"📎 Submit"}
+          </button>}
+          <button onClick={()=>setShowGuide(!showGuide)} style={{background:showGuide?T.navy:T.paper,color:showGuide?"#fff":T.ink,border:`1px solid ${T.pb}`,borderRadius:8,padding:"7px 13px",cursor:"pointer",fontWeight:700,fontSize:13}}>🤖 AI Guide</button>
+        </div>
+      </div>
+      {/* Slide */}
+      <div style={{flex:1,overflow:"hidden",background:T.paper,position:"relative"}}>
+        <SlideRender sl={sl}/>
+      </div>
+      {/* Nav bar */}
+      <div style={{background:T.white,borderTop:`1px solid ${T.pb}`,padding:"11px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <button onClick={()=>go(-1)} disabled={idx===0} style={{background:T.paper,border:`1px solid ${T.pb}`,borderRadius:8,padding:"10px 20px",cursor:idx===0?"not-allowed":"pointer",color:idx===0?T.muted:T.ink,fontWeight:700,fontSize:14,opacity:idx===0?.4:1}}>← Previous</button>
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          {phSl.map((_,i)=>{const g=ALL.indexOf(phSl[i]);const dn=progress[`${sl.pi}_${phSl[i].si}`];return <div key={i} onClick={()=>setIdx(g)} style={{width:g===idx?22:8,height:8,borderRadius:999,background:g===idx?c.accent:dn?c.border:T.pb,cursor:"pointer",transition:"all .2s"}}/>;
+          })}
+        </div>
+        <button onClick={()=>go(1)} disabled={idx===TOTAL-1} style={{background:idx===TOTAL-1?T.paper:T.navy,color:idx===TOTAL-1?T.muted:"#fff",border:"none",borderRadius:8,padding:"10px 20px",cursor:idx===TOTAL-1?"not-allowed":"pointer",fontWeight:700,fontSize:14,opacity:idx===TOTAL-1?.4:1}}>Next →</button>
+      </div>
+    </div>
+    {showGuide&&<AIGuide curSlide={sl} onClose={()=>setShowGuide(false)}/>}
+    {showAssign&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
+      <div style={{background:T.white,borderRadius:16,width:"min(510px,95vw)",maxHeight:"90vh",overflow:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+        <AssignPanel student={student} phaseIdx={sl.pi} onClose={()=>{setShowAssign(false);stGet(`asgn_${student}_${curPhase?.id}`).then(d=>{if(d)onAssignment(curPhase.id,d);});}}/>
+      </div>
+    </div>}
+  </div>;
+}
+
+/* LOGIN */
+function Login({onLogin}){
+  const [pw,setPw]=useState("");const[err,setErr]=useState("");const[shake,setShake]=useState(false);
+  function tryLogin(){
+    if(pw===CLASS_PW){onLogin("student");return;}
+    if(pw===ADMIN_PW){onLogin("admin");return;}
+    setErr("Incorrect password. Please try again.");setShake(true);setTimeout(()=>setShake(false),600);
+  }
+  return <div style={{minHeight:"100vh",background:T.navy,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+    <div style={{textAlign:"center",marginBottom:32}}>
+      <div style={{width:72,height:72,background:T.amber,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:34}}>🎓</div>
+      <h1 style={{color:"#fff",fontSize:"clamp(1.5rem,4vw,2.2rem)",fontWeight:900,margin:"0 0 7px",fontFamily:"Georgia,serif"}}>AI Creator Academy</h1>
+      <p style={{color:"rgba(255,255,255,.5)",margin:0,fontSize:15}}>From complete beginner to AI professional</p>
+    </div>
+    <div style={{background:T.white,borderRadius:20,padding:"30px 34px",width:"100%",maxWidth:400,animation:shake?"shake .5s":undefined}}>
+      <h2 style={{margin:"0 0 22px",color:T.navy,fontSize:19,fontWeight:800}}>Enter class password</h2>
+      <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&tryLogin()} placeholder="Password" autoFocus style={{width:"100%",border:`1.5px solid ${err?T.red:T.pb}`,borderRadius:10,padding:"12px 15px",fontSize:16,background:T.paper,color:T.ink,boxSizing:"border-box",outline:"none",marginBottom:11}}/>
+      {err&&<p style={{color:T.red,fontSize:13,margin:"0 0 11px"}}>{err}</p>}
+      <button onClick={tryLogin} style={{width:"100%",background:T.navy,color:"#fff",border:"none",borderRadius:10,padding:"13px",fontWeight:800,fontSize:16,cursor:"pointer"}}>Enter Classroom →</button>
+      <p style={{textAlign:"center",color:T.muted,fontSize:12,margin:"14px 0 0"}}>Contact your instructor if you need access</p>
+    </div>
+    <div style={{marginTop:20,color:"rgba(255,255,255,.35)",fontSize:12}}>
+      Student: <code style={{color:"rgba(255,255,255,.55)"}}>creator2025</code> &nbsp;|&nbsp; Admin: <code style={{color:"rgba(255,255,255,.55)"}}>admin2025</code>
+    </div>
+  </div>;
+}
+
+/* NAME PICKER */
+function NamePicker({onSelect}){
+  const [roster,setRoster]=useState(ROSTER);
+  const [custom,setCustom]=useState("");
+  useEffect(()=>{stGet("students_list").then(s=>{if(s&&s.length)setRoster(s);});},[]);
+  return <div style={{minHeight:"100vh",background:T.paper,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+    <div style={{background:T.white,borderRadius:20,padding:"30px 34px",width:"100%",maxWidth:400,boxShadow:"0 4px 24px rgba(0,0,0,.08)"}}>
+      <div style={{textAlign:"center",marginBottom:22}}>
+        <div style={{fontSize:38,marginBottom:9}}>👋</div>
+        <h2 style={{margin:"0 0 5px",color:T.navy,fontFamily:"Georgia,serif"}}>Who are you?</h2>
+        <p style={{color:T.muted,margin:0,fontSize:14}}>Select your name to track your personal progress</p>
+      </div>
+      <div style={{display:"grid",gap:9,marginBottom:18}}>
+        {roster.map((name,i)=><button key={i} onClick={()=>onSelect(name)} style={{background:T.paper,border:`1.5px solid ${T.pb}`,borderRadius:10,padding:"11px 15px",cursor:"pointer",fontWeight:700,color:T.navy,fontSize:15,textAlign:"left",display:"flex",alignItems:"center",gap:11}} onMouseEnter={e=>e.currentTarget.style.borderColor=T.amber} onMouseLeave={e=>e.currentTarget.style.borderColor=T.pb}>
+          <div style={{width:33,height:33,background:T.navy,color:"#fff",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:14,flexShrink:0}}>{name[0]}</div>
+          {name}
+        </button>)}
+      </div>
+      <div style={{borderTop:`1px solid ${T.pb}`,paddingTop:14}}>
+        <div style={{fontSize:12,color:T.muted,marginBottom:7}}>Or type your name</div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={custom} onChange={e=>setCustom(e.target.value)} onKeyDown={e=>e.key==="Enter"&&custom.trim()&&onSelect(custom.trim())} placeholder="Your name..." style={{flex:1,border:`1px solid ${T.pb}`,borderRadius:8,padding:"9px 12px",fontSize:14,background:T.paper}}/>
+          <button onClick={()=>custom.trim()&&onSelect(custom.trim())} style={{background:T.navy,color:"#fff",border:"none",borderRadius:8,padding:"9px 15px",cursor:"pointer",fontWeight:700}}>Go</button>
+        </div>
+      </div>
+    </div>
+  </div>;
+}
+
+/* ROOT APP */
+function App(){
+  const [auth,setAuth]=useState(null);
+  const [student,setStudent]=useState(null);
+  const [view,setView]=useState("dash");
+  const [activePhase,setActivePhase]=useState(0);
+  const [progress,setProgress]=useState({});
+  const [assignments,setAssignments]=useState({});
+
+  useEffect(()=>{
+    if(student){
+      stGet(`prog_${student}`).then(p=>{if(p)setProgress(p);});
+      loadAssignments(student);
+    }
+  },[student]);
+
+  async function loadAssignments(name){
+    const map={};
+    for(const phase of PHASES){const d=await stGet(`asgn_${name}_${phase.id}`);if(d)map[phase.id]=d;}
+    setAssignments(map);
+  }
+  async function markProgress(key){
+    const upd={...progress,[key]:true};setProgress(upd);
+    if(student)await stSet(`prog_${student}`,upd);
+  }
+  function handleAssignment(phId,data){setAssignments(prev=>({...prev,[phId]:data}));}
+
+  if(!auth)return <Login onLogin={role=>setAuth(role)}/>;
+  if(auth==="admin")return <Admin onLogout={()=>{setAuth(null);setStudent(null);}}/>;
+  if(!student)return <NamePicker onSelect={name=>setStudent(name)}/>;
+
+  if(view==="lesson")return <Lesson student={student} initPhase={activePhase} onBack={()=>setView("dash")} progress={progress} onProgress={markProgress} assignments={assignments} onAssignment={handleAssignment}/>;
+
+  return <div style={{minHeight:"100vh",background:T.paper,fontFamily:"system-ui,sans-serif"}}>
+    <div style={{background:T.navy,padding:"13px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{display:"flex",alignItems:"center",gap:11}}>
+        <div style={{width:34,height:34,background:T.amber,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>🎓</div>
+        <div><div style={{color:"#fff",fontWeight:800,fontSize:15}}>AI Creator Academy</div><div style={{color:"rgba(255,255,255,.5)",fontSize:11}}>From beginner to AI professional</div></div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:9}}>
+        <span style={{color:"rgba(255,255,255,.7)",fontSize:14}}>Hi, {student}</span>
+        <button onClick={()=>setStudent(null)} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12}}>Switch</button>
+        <button onClick={()=>{setAuth(null);setStudent(null);setProgress({});setAssignments({});}} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12}}>Sign out</button>
+      </div>
+    </div>
+    <Dashboard student={student} progress={progress} assignments={assignments} onEnter={pi=>{setActivePhase(pi);setView("lesson");}}/>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>
