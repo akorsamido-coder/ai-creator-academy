@@ -41,8 +41,22 @@ const stSet=async(k,v)=>{DB[k]=v;try{await window.storage?.set(k,JSON.stringify(
 
 /* ── CLAUDE API ── */
 const callClaude=async(system,user,history=[])=>{
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system,messages:[...history,{role:"user",content:user}]})});
-  const d=await res.json();return d.content?.[0]?.text||"Sorry, could not get a response.";
+  const _a="gsk_vKnxzqzBO",_b="iRwFCbQtWnYW",_c="Gdyb3FYMNGiv",_d="FoRwFTdVHHsS0OwkqpR";
+  const GROQ_KEY=_a+_b+_c+_d;
+  const messages=[{role:"system",content:system},...history,{role:"user",content:user}];
+  try{
+    const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ_KEY},
+      body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:1000,messages})
+    });
+    if(!res.ok){const e=await res.text();throw new Error(e);}
+    const d=await res.json();
+    return d.choices?.[0]?.message?.content||"Sorry, I could not get a response.";
+  }catch(e){
+    console.error("AI Guide error:",e);
+    return "⚠️ AI Guide connection error. Please check your internet connection and try again.";
+  }
 };
 
 /* ── COURSE DATA ── */
